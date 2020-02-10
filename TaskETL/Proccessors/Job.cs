@@ -77,7 +77,7 @@ namespace TaskETL.Proccessors
                 {
                     return JobResult.BuildWithError(
                         new JobException(
-                            "Unhandled exception proccesing extraction.",
+                            $"Unhandled exception proccesing extractor {this.extractor.GetID()}.",
                             this.extractor.GetID(),
                             Phase.EXTRACTION,
                             ExtractionException
@@ -96,7 +96,7 @@ namespace TaskETL.Proccessors
                 {
                     return JobResult.BuildWithError(
                         new JobException(
-                            "Unhandled exception processing transformation.",
+                            $"Unhandled exception processing transformer {this.transformer.GetID()}.",
                             this.transformer.GetID(),
                             Phase.TRANSFORMATION,
                             TransformationException
@@ -122,7 +122,7 @@ namespace TaskETL.Proccessors
                         {
                             loadingErrors.Add(
                                 new JobException(
-                                    "Unhandled exceptión proccessing loader.",
+                                    $"Unhandled exceptión proccessing loader {item.GetID()}.",
                                     item.GetID(),
                                     Phase.LOAGING
                                 )
