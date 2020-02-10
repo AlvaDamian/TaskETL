@@ -1,0 +1,10 @@
+﻿################################################################################
+# Este archivo .gitignore ha sido creado automáticamente por Microsoft(R) Visual Studio.
+################################################################################
+
+/TaskETL/bin/Debug/netstandard2.0
+/.vs/TaskETL/v16
+/TaskETL/obj
+/TaskETL/packages
+/TaskETLTests/bin/Debug/netcoreapp3.1
+/TaskETLTests/obj
