@@ -1,4 +1,4 @@
-﻿namespace TaskETL.Proccessors
+﻿namespace TaskETL.Processors
 {
     public enum Phase
     {

@@ -1,12 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace TaskETL.Proccessors
+namespace TaskETL.Processors
 {
     /// <summary>
     /// Proccessor for ETL jobs.
     /// </summary>
-    public interface IProccessor : IETLComponent
+    public interface IProcessor : IETLComponent
     {
         /// <summary>
         /// Creates an executes a collection of tasks that will
@@ -20,6 +20,6 @@ namespace TaskETL.Proccessors
         /// 
         /// <returns>A running <see cref="Task{TResult}"/> for
         /// each extractor.</returns>
-        IEnumerable<Task<JobResult>> Proccess();
+        IEnumerable<Task<JobResult>> Process();
     }
 }

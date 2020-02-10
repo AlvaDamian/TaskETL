@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace TaskETL.Proccessors
+namespace TaskETL.Processors
 {
     public class JobResult
     {
