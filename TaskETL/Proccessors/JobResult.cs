@@ -24,19 +24,19 @@ namespace TaskETL.Proccessors
             this._errors.Add(error);
         }
 
-        public static JobResult buildCompletedWithoutErrors()
+        public static JobResult BuildCompletedWithoutErrors()
         {
             return new JobResult();
         }
 
-        public static JobResult buildWithErrors(JobException error)
+        public static JobResult BuildWithError(JobException error)
         {
             return new JobResult(error);
         }
 
-        public static JobResult buildWithErrors(IEnumerable<JobException> errors)
+        public static JobResult Build(IEnumerable<JobException> errors)
         {
-            JobResult ret = buildCompletedWithoutErrors();
+            JobResult ret = BuildCompletedWithoutErrors();
 
             foreach (var item in errors)
             {
