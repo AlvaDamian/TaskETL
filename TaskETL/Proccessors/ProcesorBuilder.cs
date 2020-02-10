@@ -3,53 +3,53 @@ using TaskETL.Loaders;
 using TaskETL.Transformers;
 using System.Collections.Generic;
 
-namespace TaskETL.Proccessors
+namespace TaskETL.Processors
 {
     /// <summary>
-    /// Factory for <see cref="IProccessor"/>.
+    /// Factory for <see cref="IProcessor"/>.
     /// </summary>
-    public class ProccessorBuilder<DestinationType>
+    public class ProcessorBuilder<DestinationType>
     {
-        private ProccessorCollection model;
+        private ProcessorCollection model;
 
         private ICollection<ILoader<DestinationType>> Loaders;
 
-        public ProccessorBuilder(ILoader<DestinationType> loader) : this(new List<ILoader<DestinationType>>() { loader })
+        public ProcessorBuilder(ILoader<DestinationType> loader) : this(new List<ILoader<DestinationType>>() { loader })
         {
         }
 
-        public ProccessorBuilder(ICollection<ILoader<DestinationType>> loaders)
+        public ProcessorBuilder(ICollection<ILoader<DestinationType>> loaders)
         {
-            this.model = new ProccessorCollection("ProccessorsCollection");
+            this.model = new ProcessorCollection("ProccessorsCollection");
             this.Loaders = loaders;
         }
 
-        public ProccessorBuilder<DestinationType> AddSource<SourceType>(
+        public ProcessorBuilder<DestinationType> AddSource<SourceType>(
             string proccessorID,
             IExtractor<SourceType> extractor,
             ITransformer<SourceType, DestinationType> transformer
         )
         {
-            this.model.addProccesor(this.CreateProccessor(proccessorID, extractor, transformer, this.Loaders));
+            this.model.addProcesor(this.CreateProcessor(proccessorID, extractor, transformer, this.Loaders));
             return this;
         }
 
-        private IProccessor CreateProccessor<SourceType>(
-            string proccessorID,
+        private IProcessor CreateProcessor<SourceType>(
+            string processorID,
             IExtractor<SourceType> extractor,
             ITransformer<SourceType, DestinationType> transformer,
             ICollection<ILoader<DestinationType>> loaders
             )
         {
-            return new Proccessor<SourceType, DestinationType>(
-                proccessorID,
+            return new Processor<SourceType, DestinationType>(
+                processorID,
                 extractor,
                 transformer,
                 loaders
                 );
         }
 
-        public IProccessor build()
+        public IProcessor build()
         {
             return this.model;
         }

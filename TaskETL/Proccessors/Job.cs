@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace TaskETL.Proccessors
+namespace TaskETL.Processors
 {
     internal class RetryAction<DataType>
     {

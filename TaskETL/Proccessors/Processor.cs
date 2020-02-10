@@ -4,14 +4,14 @@ using TaskETL.Transformers;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace TaskETL.Proccessors
+namespace TaskETL.Processors
 {
-    public class Proccessor<SourceType, DestinationType> : IProccessor
+    public class Processor<SourceType, DestinationType> : IProcessor
     {
         private readonly string ID;
-        private ICollection<Job<SourceType, DestinationType>> jobs;
+        private readonly ICollection<Job<SourceType, DestinationType>> Jobs;
 
-        public Proccessor(
+        public Processor(
             string id,
             IExtractor<SourceType> extractor,
             ITransformer<SourceType, DestinationType> transformer,
@@ -20,7 +20,7 @@ namespace TaskETL.Proccessors
         {
         }
 
-        public Proccessor(
+        public Processor(
             string id,
             IExtractor<SourceType> extractor,
             ITransformer<SourceType, DestinationType> transformer,
@@ -28,17 +28,17 @@ namespace TaskETL.Proccessors
             )
         {
             this.ID = id;
-            this.jobs = new List<Job<SourceType, DestinationType>>();
+            this.Jobs = new List<Job<SourceType, DestinationType>>();
 
             foreach (var item in loaders)
             {
-                this.addJob(this.createJob(extractor, transformer, item));
+                this.AddJob(this.createJob(extractor, transformer, item));
             }
         }
 
-        private void addJob(Job<SourceType, DestinationType> job)
+        private void AddJob(Job<SourceType, DestinationType> job)
         {
-            this.jobs.Add(job);
+            this.Jobs.Add(job);
         }
 
         private Job<SourceType, DestinationType> createJob(
@@ -50,11 +50,11 @@ namespace TaskETL.Proccessors
             return new Job<SourceType, DestinationType>(extractor, transformer, loader);
         }
 
-        public IEnumerable<Task<JobResult>> Proccess()
+        public IEnumerable<Task<JobResult>> Process()
         {
             ICollection<Task<JobResult>> ret = new List<Task<JobResult>>();
 
-            foreach (var item in this.jobs)
+            foreach (var item in this.Jobs)
             {
                 ret.Add(item.work());
             }

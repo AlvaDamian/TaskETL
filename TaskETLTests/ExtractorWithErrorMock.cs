@@ -1,6 +1,5 @@
 ﻿using System;
 using TaskETL.Extractors;
-using TaskETL.Proccessors;
 
 namespace TaskETLTests
 {

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace TaskETL.Proccessors
+namespace TaskETL.Processors
 {
     public class JobException : Exception
     {
