@@ -3,10 +3,11 @@ using TaskETL.Loaders;
 using TaskETL.Transformers;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System;
 
 namespace TaskETL.Processors
 {
-    public class Processor<SourceType, DestinationType> : IProcessor
+    public class Processor<SourceType, DestinationType> : IProcessor, IDisposable
     {
         private readonly string ID;
         private readonly ICollection<Job<SourceType, DestinationType>> Jobs;
@@ -56,7 +57,7 @@ namespace TaskETL.Processors
 
             foreach (var item in this.Jobs)
             {
-                ret.Add(item.work());
+                ret.Add(item.Work());
             }
 
             foreach (var item in ret)
@@ -70,6 +71,14 @@ namespace TaskETL.Processors
         public string GetID()
         {
             return this.ID;
+        }
+
+        public void Dispose()
+        {
+            foreach (var item in this.Jobs)
+            {
+                item.Dispose();
+            }
         }
     }
 }
