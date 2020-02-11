@@ -10,9 +10,9 @@ namespace TaskETL.Processors
     /// </summary>
     public class ProcessorBuilder<DestinationType>
     {
-        private ProcessorCollection model;
+        private readonly ProcessorCollection Model;
 
-        private ICollection<ILoader<DestinationType>> Loaders;
+        private readonly ICollection<ILoader<DestinationType>> Loaders;
 
         public ProcessorBuilder(ILoader<DestinationType> loader) : this(new List<ILoader<DestinationType>>() { loader })
         {
@@ -20,7 +20,7 @@ namespace TaskETL.Processors
 
         public ProcessorBuilder(ICollection<ILoader<DestinationType>> loaders)
         {
-            this.model = new ProcessorCollection("ProccessorsCollection");
+            this.Model = new ProcessorCollection("ProccessorsCollection");
             this.Loaders = loaders;
         }
 
@@ -30,7 +30,7 @@ namespace TaskETL.Processors
             ITransformer<SourceType, DestinationType> transformer
         )
         {
-            this.model.addProcesor(this.CreateProcessor(proccessorID, extractor, transformer, this.Loaders));
+            this.Model.AddProcesor(this.CreateProcessor(proccessorID, extractor, transformer, this.Loaders));
             return this;
         }
 
@@ -49,9 +49,9 @@ namespace TaskETL.Processors
                 );
         }
 
-        public IProcessor build()
+        public IProcessor Build()
         {
-            return this.model;
+            return this.Model;
         }
     }
 }

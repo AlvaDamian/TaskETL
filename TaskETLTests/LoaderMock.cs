@@ -1,8 +1,9 @@
-﻿using TaskETL.Loaders;
+﻿using System;
+using TaskETL.Loaders;
 
 namespace TaskETLTests.Mock
 {
-    public class LoaderMock<DestinationType> : ILoader<DestinationType>
+    public class LoaderMock<DestinationType> : ILoader<DestinationType>, IDisposable
     {
 
         public static string DEFAULT_ID = "LoaderMock";
@@ -10,6 +11,7 @@ namespace TaskETLTests.Mock
 
         public DestinationType DataReceived { get; private set; }
         public bool Executed { get; private set; }
+        public bool Disposed { get; private set; }
 
         public LoaderMock() : this(DEFAULT_ID)
         {
@@ -18,6 +20,7 @@ namespace TaskETLTests.Mock
         public LoaderMock(string id)
         {
             this.Executed = false;
+            this.Disposed = false;
             this.ID = id;
         }
 
@@ -30,6 +33,11 @@ namespace TaskETLTests.Mock
         public string GetID()
         {
             return this.ID;
+        }
+
+        public void Dispose()
+        {
+            this.Disposed = true;
         }
     }
 }

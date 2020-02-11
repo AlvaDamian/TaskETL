@@ -1,13 +1,17 @@
-﻿using TaskETL.Extractors;
+﻿using System;
+using TaskETL.Extractors;
 
 namespace TaskETLTests.Mock
 {
-    public class ExtractorMock<SourceType> : IExtractor<SourceType>
+    public class ExtractorMock<SourceType> : IExtractor<SourceType>, IDisposable
     {
         public static string DEFAULT_ID = "ExtractorMock";
 
-        private string ID;
+        private readonly string ID;
         private readonly SourceType Data;
+
+        public bool Disposed { get; private set; }
+        public bool Executed { get; private set; }
 
         public ExtractorMock() : this(DEFAULT_ID)
         {
@@ -20,6 +24,8 @@ namespace TaskETLTests.Mock
         public ExtractorMock(string id)
         {
             this.ID = id;
+            this.Disposed = false;
+            this.Executed = false;
         }
 
         public ExtractorMock(string id, SourceType singleData) : this(id)
@@ -29,12 +35,18 @@ namespace TaskETLTests.Mock
 
         public SourceType Extract()
         {
+            this.Executed = true;
             return this.Data;
         }
 
         public string GetID()
         {
             return this.ID;
+        }
+
+        public void Dispose()
+        {
+            this.Disposed = true;
         }
     }
 }
