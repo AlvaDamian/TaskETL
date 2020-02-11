@@ -7,23 +7,6 @@ using System.Threading.Tasks;
 
 namespace TaskETL.Processors
 {
-    internal class RetryAction<DataType>
-    {
-        private readonly DataType destinationData;
-        private readonly ILoader<DataType> Loader;
-
-        public RetryAction(DataType data, ILoader<DataType> loader)
-        {
-            this.destinationData = data;
-            this.Loader = loader;
-        }
-
-        public void PerformRetry()
-        {
-            this.Loader.load(this.destinationData);
-        }
-    }
-
     /// <summary>
     /// Performs a ETL job from one source to all loaders.
     /// </summary>
