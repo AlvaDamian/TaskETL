@@ -89,7 +89,7 @@ namespace TaskETLTests.Processors
             ProcessorBuilder<object> builder = new ProcessorBuilder<object>(loader);
 
             IProcessor faillingProccessor = 
-                builder.AddSource("FailingProccessor", extractor, transformer).build();
+                builder.AddSource("FailingProccessor", extractor, transformer).Build();
 
             IEnumerable<Task<JobResult>> tasks = faillingProccessor.Process();
             Task.WaitAll(new List<Task>(tasks).ToArray());
@@ -129,7 +129,7 @@ namespace TaskETLTests.Processors
             IProcessor proccessor = 
                 new ProcessorBuilder<object>(loader)
                 .AddSource("ProccessorWithTransformationError", extractor, tranformer)
-                .build();
+                .Build();
 
             IEnumerable<Task<JobResult>> tasks = proccessor.Process();
             Task.WaitAll(new List<Task>(tasks).ToArray());
@@ -170,7 +170,7 @@ namespace TaskETLTests.Processors
             IProcessor proccessor = 
                 new ProcessorBuilder<object>(loader)
                 .AddSource("ProccessWithLoadingError", extractor, transformer)
-                .build();
+                .Build();
 
             IEnumerable<Task<JobResult>> tasks = proccessor.Process();
             Task.WaitAll(new List<Task>(tasks).ToArray());
@@ -208,7 +208,7 @@ namespace TaskETLTests.Processors
             IProcessor proccessor =
                 new ProcessorBuilder<object>(loader)
                 .AddSource("Proccessor", extractor, transformer)
-                .build();
+                .Build();
 
             IEnumerable<Task<JobResult>> tasks = proccessor.Process();
             Task.WaitAll(new List<Task>(tasks).ToArray());
@@ -226,12 +226,79 @@ namespace TaskETLTests.Processors
             IProcessor proccessor =
                 new ProcessorBuilder<object>(loader)
                 .AddSource("proccessor", extractor, transformer)
-                .build();
+                .Build();
 
             IEnumerable<Task<JobResult>> tasks = proccessor.Process();
             Task.WaitAll(new List<Task>(tasks).ToArray());
 
             Assert.IsFalse(loader.Executed);
+        }
+
+        [TestMethod]
+        public void TestDisposesExtractor()
+        {
+            ExtractorMock<object> extractor = new ExtractorMock<object>(new object());
+            TransformerMock<object, object> transformer = new TransformerMock<object, object>(new object());
+            LoaderMock<object> loader = new LoaderMock<object>();
+
+            IProcessor processor = 
+                new ProcessorBuilder<object>(loader)
+                .AddSource("process", extractor, transformer)
+                .Build();
+
+            processor.Dispose();
+
+            Assert.IsTrue(extractor.Disposed);
+            Assert.IsTrue(transformer.Disposed);
+            Assert.IsTrue(loader.Disposed);
+        }
+
+        [TestMethod]
+        public void TestWillNoExecuteAnyJobIfNoExtractorIsSpecified()
+        {
+            LoaderMock<object> loader = new LoaderMock<object>();
+            IProcessor processor = new ProcessorBuilder<object>(loader).Build();
+
+            IEnumerable<Task> tasks = processor.Process();
+            Task.WaitAll(new List<Task>(tasks).ToArray());
+
+            Assert.IsFalse(loader.Executed);
+        }
+
+        [TestMethod]
+        public void TestWillNoExecuteAnyJobIfNoLoaderIsSpecified()
+        {
+            ExtractorMock<object> extractor = new ExtractorMock<object>(new object());
+            TransformerMock<object, object> transformer = new TransformerMock<object, object>(new object());
+            ICollection<ILoader<object>> loaders = new List<ILoader<object>>();
+
+            IProcessor processor =
+                new ProcessorBuilder<object>(loaders)
+                .AddSource("process", extractor, transformer)
+                .Build();
+
+            IEnumerable<Task> tasks = processor.Process();
+            Task.WaitAll(new List<Task>(tasks).ToArray());
+
+            Assert.IsFalse(extractor.Executed);
+            Assert.IsFalse(transformer.Executed);
+        }
+
+        [TestMethod]
+        public void TestWillDispoeEvenIfLoaderIsNotSpecified()
+        {
+            ExtractorMock<object> extractor = new ExtractorMock<object>(new object());
+            TransformerMock<object, object> transformer = new TransformerMock<object, object>(new object());
+            ICollection<ILoader<object>> loaders = new List<ILoader<object>>();
+
+            IProcessor processor =
+                new ProcessorBuilder<object>(loaders)
+                .AddSource("process", extractor, transformer)
+                .Build();
+
+            processor.Dispose();
+            Assert.IsTrue(extractor.Disposed);
+            Assert.IsTrue(transformer.Disposed);
         }
     }
 }

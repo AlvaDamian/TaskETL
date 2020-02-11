@@ -20,7 +20,7 @@ namespace TaskETL.Processors
     /// </summary>
     /// <typeparam name="SourceType">Source data type.</typeparam>
     /// <typeparam name="DestinationType">Destination data type.</typeparam>
-    class Job<SourceType, DestinationType> : IDisposable
+    class Job<SourceType, DestinationType>
     {
         private readonly IExtractor<SourceType> Extractor;
         private readonly ITransformer<SourceType, DestinationType> Transformer;
@@ -50,27 +50,6 @@ namespace TaskETL.Processors
             this.Extractor = extractor;
             this.Transformer = transformer;
             this.Loaders = loaders;
-        }
-
-        public void Dispose()
-        {
-            if (this.Extractor is IDisposable)
-            {
-                ((IDisposable) this.Extractor).Dispose();
-            }
-
-            if (this.Transformer is IDisposable)
-            {
-                ((IDisposable)this.Transformer).Dispose();
-            }
-
-            foreach (var item in this.Loaders)
-            {
-                if (item is IDisposable)
-                {
-                    ((IDisposable) item).Dispose();
-                }
-            }
         }
 
         /// <summary>
