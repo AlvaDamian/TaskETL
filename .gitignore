@@ -4,7 +4,10 @@
 
 /TaskETL/bin/Debug/netstandard2.0
 /.vs/TaskETL/v16
+/TaskETL/bin
 /TaskETL/obj
 /TaskETL/packages
 /TaskETLTests/bin/Debug/netcoreapp3.1
 /TaskETLTests/obj
+/TestResults
+
