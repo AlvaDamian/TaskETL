@@ -55,7 +55,7 @@ In this example, an extractor will take items saved in a string in the format **
     using System.Collections.Generic;
     using TaskETL.Transformers;
 
-    namespace DetalleComprobantes
+    namespace Example
     {
       public class ItemTransformer : ITransformer<IEnumerable<string>, IEnumerable<Item>>
       {
