@@ -2,6 +2,7 @@
 using TaskETL.Loaders;
 using TaskETL.Transformers;
 using System.Collections.Generic;
+using System;
 
 namespace TaskETL.Processors
 {
@@ -16,6 +17,11 @@ namespace TaskETL.Processors
 
         public ProcessorBuilder(ILoader<DestinationType> loader) : this(new List<ILoader<DestinationType>>() { loader })
         {
+        }
+
+        public ProcessorBuilder(params ILoader<DestinationType>[] loaders) : this(Array.AsReadOnly(loaders))
+        {
+
         }
 
         public ProcessorBuilder(ICollection<ILoader<DestinationType>> loaders)
