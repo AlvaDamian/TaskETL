@@ -3,7 +3,8 @@ using TaskETL.Transformers;
 
 namespace TaskETLTests.Mock
 {
-    public class TransformerMock<SourceType, DestinationType> : ITransformer<SourceType, DestinationType>, IDisposable
+    public class TransformerMock<SourceType, DestinationType> :
+        ITransformer<SourceType, DestinationType>, IDisposable
     {
         public static string DEFAULT_ID = "TransformerMock";
         private readonly string ID;

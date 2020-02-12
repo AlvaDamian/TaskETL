@@ -28,28 +28,28 @@ namespace TaskETLTests.Processors
         public void TestSendsSameObjectFromExtractorToLoader()
         {
 
-            BasicModel modelA = new BasicModel()
+            SourceModel modelA = new SourceModel()
             {
                 StringData= "testing model A",
                 Int32Data= 33
             };
 
-            BasicModel modelB = new BasicModel()
+            SourceModel modelB = new SourceModel()
             {
                 StringData= "testing model B",
                 DecimalData= 54.25m,
                 Int64Data= 999999
             };
 
-            ICollection<BasicModel> collectionWithModelA = new List<BasicModel>() { modelA };
-            ICollection<BasicModel> collectionWithBothModels = new List<BasicModel>() { modelA, modelB };
+            ICollection<SourceModel> collectionWithModelA = new List<SourceModel>() { modelA };
+            ICollection<SourceModel> collectionWithBothModels = new List<SourceModel>() { modelA, modelB };
 
-            IExtractor<ICollection<BasicModel>> extractor = new ExtractorMock<ICollection<BasicModel>>(collectionWithModelA);
-            LoaderMock<ICollection<BasicModel>> loader = new LoaderMock<ICollection<BasicModel>>();
-            IProcessor proccessor = new Processor<ICollection<BasicModel>, ICollection<BasicModel>>(
+            IExtractor<ICollection<SourceModel>> extractor = new ExtractorMock<ICollection<SourceModel>>(collectionWithModelA);
+            LoaderMock<ICollection<SourceModel>> loader = new LoaderMock<ICollection<SourceModel>>();
+            IProcessor proccessor = new Processor<ICollection<SourceModel>, ICollection<SourceModel>>(
                 "ModelAProccessor",
                 extractor,
-                new SameTypeTransformer<ICollection<BasicModel>>("SameTypeTransformer"),
+                new SameTypeTransformer<ICollection<SourceModel>>("SameTypeTransformer"),
                 loader
                 );
 
@@ -59,12 +59,12 @@ namespace TaskETLTests.Processors
             Assert.IsTrue(loader.DataReceived.Contains(modelA));
             Assert.IsFalse(loader.DataReceived.Contains(modelB));
 
-            extractor = new ExtractorMock<ICollection<BasicModel>>(collectionWithBothModels);
+            extractor = new ExtractorMock<ICollection<SourceModel>>(collectionWithBothModels);
 
-            loader = new LoaderMock<ICollection<BasicModel>>();
-            proccessor = new Processor<ICollection<BasicModel>, ICollection<BasicModel>>(
+            loader = new LoaderMock<ICollection<SourceModel>>();
+            proccessor = new Processor<ICollection<SourceModel>, ICollection<SourceModel>>(
                 "ModelAAndBProccessor",
-                extractor, new SameTypeTransformer<ICollection<BasicModel>>("SameTypeTransformer"),
+                extractor, new SameTypeTransformer<ICollection<SourceModel>>("SameTypeTransformer"),
                 loader
             );
 
@@ -235,7 +235,7 @@ namespace TaskETLTests.Processors
         }
 
         [TestMethod]
-        public void TestDisposesExtractor()
+        public void TestDisposesETLComponents()
         {
             ExtractorMock<object> extractor = new ExtractorMock<object>(new object());
             TransformerMock<object, object> transformer = new TransformerMock<object, object>(new object());
