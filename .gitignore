@@ -8,3 +8,4 @@
 /TaskETL/packages
 /TaskETLTests/bin/Debug/netcoreapp3.1
 /TaskETLTests/obj
+/.vs
