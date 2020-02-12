@@ -25,7 +25,8 @@ namespace TaskETL.Transformers
     /// data type and right transformer source.</typeparam>
     /// <typeparam name="DestinationType">Destination data type.</typeparam>
     public class TransformerPipeline<SourceType, IntermediateType, DestinationType> :
-        ITransformer<SourceType, DestinationType>
+        ITransformer<SourceType, DestinationType>,
+        IDisposable
     {
         private readonly ITransformer<SourceType, IntermediateType> LeftTransformer;
         private readonly ITransformer<IntermediateType, DestinationType> RightTransformer;
@@ -96,6 +97,19 @@ namespace TaskETL.Transformers
         public DestinationType transform(SourceType source)
         {
             return this.RightTransformer.transform(this.LeftTransformer.transform(source));
+        }
+
+        public void Dispose()
+        {
+            if (this.LeftTransformer is IDisposable)
+            {
+                ((IDisposable) this.LeftTransformer).Dispose();
+            }
+
+            if (this.RightTransformer is IDisposable)
+            {
+                ((IDisposable) this.RightTransformer).Dispose();
+            }
         }
     }
 }
