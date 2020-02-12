@@ -68,7 +68,7 @@ namespace TaskETL.Transformers
                 transformer
                 );
         }
-
+        
         /// <summary>
         /// Pipes another transformer before this one, changing the
         /// source data type.
