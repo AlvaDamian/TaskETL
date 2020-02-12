@@ -1,6 +1,6 @@
 ﻿namespace TaskETLTests.Mock
 {
-    public class Model
+    public class BasicModel
     {
         public string StringData { get; set; }
         public int Int32Data { get; set; }

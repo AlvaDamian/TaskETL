@@ -28,28 +28,28 @@ namespace TaskETLTests.Processors
         public void TestSendsSameObjectFromExtractorToLoader()
         {
 
-            Model modelA = new Model()
+            BasicModel modelA = new BasicModel()
             {
                 StringData= "testing model A",
                 Int32Data= 33
             };
 
-            Model modelB = new Model()
+            BasicModel modelB = new BasicModel()
             {
                 StringData= "testing model B",
                 DecimalData= 54.25m,
                 Int64Data= 999999
             };
 
-            ICollection<Model> collectionWithModelA = new List<Model>() { modelA };
-            ICollection<Model> collectionWithBothModels = new List<Model>() { modelA, modelB };
+            ICollection<BasicModel> collectionWithModelA = new List<BasicModel>() { modelA };
+            ICollection<BasicModel> collectionWithBothModels = new List<BasicModel>() { modelA, modelB };
 
-            IExtractor<ICollection<Model>> extractor = new ExtractorMock<ICollection<Model>>(collectionWithModelA);
-            LoaderMock<ICollection<Model>> loader = new LoaderMock<ICollection<Model>>();
-            IProcessor proccessor = new Processor<ICollection<Model>, ICollection<Model>>(
+            IExtractor<ICollection<BasicModel>> extractor = new ExtractorMock<ICollection<BasicModel>>(collectionWithModelA);
+            LoaderMock<ICollection<BasicModel>> loader = new LoaderMock<ICollection<BasicModel>>();
+            IProcessor proccessor = new Processor<ICollection<BasicModel>, ICollection<BasicModel>>(
                 "ModelAProccessor",
                 extractor,
-                new SameTypeTransformer<ICollection<Model>>("SameTypeTransformer"),
+                new SameTypeTransformer<ICollection<BasicModel>>("SameTypeTransformer"),
                 loader
                 );
 
@@ -59,12 +59,12 @@ namespace TaskETLTests.Processors
             Assert.IsTrue(loader.DataReceived.Contains(modelA));
             Assert.IsFalse(loader.DataReceived.Contains(modelB));
 
-            extractor = new ExtractorMock<ICollection<Model>>(collectionWithBothModels);
+            extractor = new ExtractorMock<ICollection<BasicModel>>(collectionWithBothModels);
 
-            loader = new LoaderMock<ICollection<Model>>();
-            proccessor = new Processor<ICollection<Model>, ICollection<Model>>(
+            loader = new LoaderMock<ICollection<BasicModel>>();
+            proccessor = new Processor<ICollection<BasicModel>, ICollection<BasicModel>>(
                 "ModelAAndBProccessor",
-                extractor, new SameTypeTransformer<ICollection<Model>>("SameTypeTransformer"),
+                extractor, new SameTypeTransformer<ICollection<BasicModel>>("SameTypeTransformer"),
                 loader
             );
 
