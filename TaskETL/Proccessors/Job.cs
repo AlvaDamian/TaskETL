@@ -7,35 +7,24 @@ using System.Threading.Tasks;
 
 namespace TaskETL.Processors
 {
-    internal class RetryAction<DataType>
-    {
-        private readonly DataType destinationData;
-        private readonly ILoader<DataType> Loader;
-
-        public RetryAction(DataType data, ILoader<DataType> loader)
-        {
-            this.destinationData = data;
-            this.Loader = loader;
-        }
-
-        public void PerformRetry()
-        {
-            this.Loader.load(this.destinationData);
-        }
-    }
-
     /// <summary>
+    /// <para>
     /// Performs a ETL job from one source to all loaders.
+    /// </para>
+    /// 
+    /// <para>
+    /// To release resource, call to <see cref="Dispose"/> has to
+    /// be made. A call to this method will extractor, transformer and
+    /// loaders assigned to this object.
+    /// </para>
     /// </summary>
     /// <typeparam name="SourceType">Source data type.</typeparam>
     /// <typeparam name="DestinationType">Destination data type.</typeparam>
     class Job<SourceType, DestinationType>
     {
-        
-
-        private IExtractor<SourceType> extractor;
-        private ITransformer<SourceType, DestinationType> transformer;
-        private ICollection<ILoader<DestinationType>> loaders;
+        private readonly IExtractor<SourceType> Extractor;
+        private readonly ITransformer<SourceType, DestinationType> Transformer;
+        private readonly ICollection<ILoader<DestinationType>> Loaders;
 
         public Job(
             IExtractor<SourceType> extractor,
@@ -43,11 +32,11 @@ namespace TaskETL.Processors
             ILoader<DestinationType> loader
             )
         {
-            this.loaders = new List<ILoader<DestinationType>>();
+            this.Loaders = new List<ILoader<DestinationType>>();
 
-            this.extractor = extractor;
-            this.transformer = transformer;
-            this.loaders.Add(loader);
+            this.Extractor = extractor;
+            this.Transformer = transformer;
+            this.Loaders.Add(loader);
         }
 
         public Job(
@@ -56,14 +45,25 @@ namespace TaskETL.Processors
             ICollection<ILoader<DestinationType>> loaders
         )
         {
-            this.loaders = new List<ILoader<DestinationType>>();
+            this.Loaders = new List<ILoader<DestinationType>>();
 
-            this.extractor = extractor;
-            this.transformer = transformer;
-            this.loaders = loaders;
+            this.Extractor = extractor;
+            this.Transformer = transformer;
+            this.Loaders = loaders;
         }
 
-        public Task<JobResult> work()
+        /// <summary>
+        /// <para>
+        /// Creates and starts the job.
+        /// </para>
+        /// 
+        /// <para>
+        /// Concurrent calls to this method will create and start
+        /// the same job.
+        /// </para>
+        /// </summary>
+        /// <returns>A running task with a job.</returns>
+        public Task<JobResult> Work()
         {
             return new Task<JobResult>(() =>
             {
@@ -71,14 +71,14 @@ namespace TaskETL.Processors
 
                 try
                 {
-                    data = this.extractor.Extract();
+                    data = this.Extractor.Extract();
                 }
                 catch (Exception ExtractionException)
                 {
                     return JobResult.BuildWithError(
                         new JobException(
-                            $"Unhandled exception proccesing extractor {this.extractor.GetID()}.",
-                            this.extractor.GetID(),
+                            $"Unhandled exception proccesing extractor {this.Extractor.GetID()}.",
+                            this.Extractor.GetID(),
                             Phase.EXTRACTION,
                             ExtractionException
                             )
@@ -90,14 +90,14 @@ namespace TaskETL.Processors
 
                 try
                 {
-                    destinationData = this.transformer.transform(data);
+                    destinationData = this.Transformer.transform(data);
                 }
                 catch (Exception TransformationException)
                 {
                     return JobResult.BuildWithError(
                         new JobException(
-                            $"Unhandled exception processing transformer {this.transformer.GetID()}.",
-                            this.transformer.GetID(),
+                            $"Unhandled exception processing transformer {this.Transformer.GetID()}.",
+                            this.Transformer.GetID(),
                             Phase.TRANSFORMATION,
                             TransformationException
                         )
@@ -108,7 +108,7 @@ namespace TaskETL.Processors
                 ICollection<JobException> loadingErrors = new List<JobException>();
                 ICollection<Task> loadersTasks = new List<Task>();
 
-                foreach (var item in this.loaders)
+                foreach (var item in this.Loaders)
                 {
                     ILoader<DestinationType> currentLoader = item;
 
