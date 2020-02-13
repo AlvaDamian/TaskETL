@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace TaskETL.Processors
@@ -9,12 +10,12 @@ namespace TaskETL.Processors
     class ProcessorCollection : IProcessor
     {
         private readonly string ID;
-        private ICollection<IProcessor> Processors;
+        private ConcurrentBag<IProcessor> Processors;
 
         public ProcessorCollection(string id)
         {
             this.ID = id;
-            this.Processors = new List<IProcessor>();
+            this.Processors = new ConcurrentBag<IProcessor>();
         }
 
         /// <summary>
@@ -41,12 +42,15 @@ namespace TaskETL.Processors
 
         public IEnumerable<Task<JobResult>> Process()
         {
-            List<Task<JobResult>> ret = new List<Task<JobResult>>();
+            ConcurrentBag<Task<JobResult>> ret = new ConcurrentBag<Task<JobResult>>();
             
 
             foreach (var item in this.Processors)
             {
-                ret.AddRange(item.Process());
+                foreach (var task in item.Process())
+                {
+                    ret.Add(task);
+                };
             }
 
             return ret;

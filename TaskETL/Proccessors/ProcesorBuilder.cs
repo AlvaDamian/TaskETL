@@ -3,6 +3,7 @@ using TaskETL.Loaders;
 using TaskETL.Transformers;
 using System.Collections.Generic;
 using System;
+using System.Collections.Concurrent;
 
 namespace TaskETL.Processors
 {
@@ -13,7 +14,7 @@ namespace TaskETL.Processors
     {
         private readonly ProcessorCollection Model;
 
-        private readonly ICollection<ILoader<DestinationType>> Loaders;
+        private readonly IEnumerable<ILoader<DestinationType>> Loaders;
 
         public ProcessorBuilder(ILoader<DestinationType> loader) : this(new List<ILoader<DestinationType>>() { loader })
         {
@@ -27,7 +28,8 @@ namespace TaskETL.Processors
         public ProcessorBuilder(ICollection<ILoader<DestinationType>> loaders)
         {
             this.Model = new ProcessorCollection("ProccessorsCollection");
-            this.Loaders = loaders;
+            //this.Loaders = loaders;
+            this.Loaders = new ConcurrentBag<ILoader<DestinationType>>(loaders);
         }
 
         public ProcessorBuilder<DestinationType> AddSource<SourceType>(
@@ -44,7 +46,7 @@ namespace TaskETL.Processors
             string processorID,
             IExtractor<SourceType> extractor,
             ITransformer<SourceType, DestinationType> transformer,
-            ICollection<ILoader<DestinationType>> loaders
+            IEnumerable<ILoader<DestinationType>> loaders
             )
         {
             return new Processor<SourceType, DestinationType>(
