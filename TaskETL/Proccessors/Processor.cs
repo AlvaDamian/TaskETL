@@ -4,6 +4,7 @@ using TaskETL.Transformers;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System;
+using System.Collections.Concurrent;
 
 namespace TaskETL.Processors
 {
@@ -18,9 +19,9 @@ namespace TaskETL.Processors
     public class Processor<SourceType, DestinationType> : IProcessor
     {
         private readonly string ID;
-        private readonly ICollection<Job<SourceType, DestinationType>> Jobs;
+        private readonly IEnumerable<Job<SourceType, DestinationType>> Jobs;
 
-        private readonly ICollection<IDisposable> ToDispose;
+        private readonly IEnumerable<IDisposable> ToDispose;
 
         /// <summary>
         /// <para>
@@ -55,42 +56,45 @@ namespace TaskETL.Processors
             string id,
             IExtractor<SourceType> extractor,
             ITransformer<SourceType, DestinationType> transformer,
-            ICollection<ILoader<DestinationType>> loaders
+            IEnumerable<ILoader<DestinationType>> loaders
             )
         {
-            
             this.ID = id;
-            this.ToDispose = new List<IDisposable>();
-            this.Jobs = new List<Job<SourceType, DestinationType>>();
+            ConcurrentBag<IDisposable> disposables = new ConcurrentBag<IDisposable>();
+            ConcurrentBag<Job<SourceType, DestinationType>>
+                jobs = new ConcurrentBag<Job<SourceType, DestinationType>>();
 
             //Add extractor for dispose
             if (extractor is IDisposable)
             {
-                this.ToDispose.Add((IDisposable) extractor);
+                disposables.Add((IDisposable) extractor);
             }
 
             //Add transfomer for dispose 
             if (transformer is IDisposable)
             {
-                this.ToDispose.Add((IDisposable) transformer);
+                disposables.Add((IDisposable) transformer);
             }
 
             foreach (var item in loaders)
             {
-                this.AddJob(this.CreateJob(extractor, transformer, item));
+                jobs.Add(this.CreateJob(extractor, transformer, item));
 
                 //Add current loader for dispose
                 if (item is IDisposable)
                 {
-                    this.ToDispose.Add((IDisposable) item);
+                    disposables.Add((IDisposable) item);
                 }
             }
+
+            this.ToDispose = disposables;
+            this.Jobs = jobs;
         }
 
-        private void AddJob(Job<SourceType, DestinationType> job)
-        {
-            this.Jobs.Add(job);
-        }
+        //private void AddJob(Job<SourceType, DestinationType> job)
+        //{
+        //    this.Jobs.Add(job);
+        //}
 
         private Job<SourceType, DestinationType> CreateJob(
             IExtractor<SourceType> extractor,
@@ -103,7 +107,7 @@ namespace TaskETL.Processors
 
         public IEnumerable<Task<JobResult>> Process()
         {
-            ICollection<Task<JobResult>> ret = new List<Task<JobResult>>();
+            ConcurrentBag<Task<JobResult>> ret = new ConcurrentBag<Task<JobResult>>();
 
             foreach (var item in this.Jobs)
             {

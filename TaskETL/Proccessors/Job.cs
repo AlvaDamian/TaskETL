@@ -2,8 +2,9 @@
 using TaskETL.Loaders;
 using TaskETL.Transformers;
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace TaskETL.Processors
 {
@@ -24,19 +25,15 @@ namespace TaskETL.Processors
     {
         private readonly IExtractor<SourceType> Extractor;
         private readonly ITransformer<SourceType, DestinationType> Transformer;
-        private readonly ICollection<ILoader<DestinationType>> Loaders;
+        private readonly IEnumerable<ILoader<DestinationType>> Loaders;
 
         public Job(
             IExtractor<SourceType> extractor,
             ITransformer<SourceType, DestinationType> transformer,
             ILoader<DestinationType> loader
             )
+            : this(extractor, transformer, new List<ILoader<DestinationType>>() { loader })
         {
-            this.Loaders = new List<ILoader<DestinationType>>();
-
-            this.Extractor = extractor;
-            this.Transformer = transformer;
-            this.Loaders.Add(loader);
         }
 
         public Job(
@@ -45,11 +42,9 @@ namespace TaskETL.Processors
             ICollection<ILoader<DestinationType>> loaders
         )
         {
-            this.Loaders = new List<ILoader<DestinationType>>();
-
             this.Extractor = extractor;
             this.Transformer = transformer;
-            this.Loaders = loaders;
+            this.Loaders = new ConcurrentBag<ILoader<DestinationType>>(loaders);
         }
 
         /// <summary>
@@ -104,9 +99,8 @@ namespace TaskETL.Processors
                     ) ;
                 }
 
-                //ICollection<Action> failedLoaders = new List<Action>();
-                ICollection<JobException> loadingErrors = new List<JobException>();
-                ICollection<Task> loadersTasks = new List<Task>();
+                BlockingCollection<JobException> loadingErrors = new BlockingCollection<JobException>();
+                BlockingCollection<Task> loadersTasks = new BlockingCollection<Task>();
 
                 foreach (var item in this.Loaders)
                 {
