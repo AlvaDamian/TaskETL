@@ -63,41 +63,46 @@ namespace TaskETL.Processors
             return new Task<JobResult>(() =>
             {
                 SourceType data;
-
-                try
-                {
-                    data = this.Extractor.Extract();
-                }
-                catch (Exception ExtractionException)
-                {
-                    return JobResult.BuildWithError(
-                        new JobException(
-                            $"Unhandled exception proccesing extractor '{this.Extractor.GetID()}'.",
-                            this.Extractor.GetID(),
-                            Phase.EXTRACTION,
-                            ExtractionException
-                            )
-                        );
-                }
-
-
                 DestinationType destinationData;
 
-                try
+                lock (this.Extractor)
                 {
-                    destinationData = this.Transformer.transform(data);
+                    try
+                    {
+                        data = this.Extractor.Extract();
+                    }
+                    catch (Exception ExtractionException)
+                    {
+                        return JobResult.BuildWithError(
+                            new JobException(
+                                $"Unhandled exception proccesing extractor '{this.Extractor.GetID()}'.",
+                                this.Extractor.GetID(),
+                                Phase.EXTRACTION,
+                                ExtractionException
+                                )
+                            );
+                    }
                 }
-                catch (Exception TransformationException)
+
+                lock (this.Transformer)
                 {
-                    return JobResult.BuildWithError(
-                        new JobException(
-                            $"Unhandled exception processing transformer '{this.Transformer.GetID()}'.",
-                            this.Transformer.GetID(),
-                            Phase.TRANSFORMATION,
-                            TransformationException
-                        )
-                    ) ;
+                    try
+                    {
+                        destinationData = this.Transformer.transform(data);
+                    }
+                    catch (Exception TransformationException)
+                    {
+                        return JobResult.BuildWithError(
+                            new JobException(
+                                $"Unhandled exception processing transformer '{this.Transformer.GetID()}'.",
+                                this.Transformer.GetID(),
+                                Phase.TRANSFORMATION,
+                                TransformationException
+                            )
+                        );
+                    }
                 }
+                
 
                 BlockingCollection<JobException> loadingErrors = new BlockingCollection<JobException>();
                 BlockingCollection<Task> loadersTasks = new BlockingCollection<Task>();
@@ -108,21 +113,23 @@ namespace TaskETL.Processors
 
                     loadersTasks.Add(Task.Run(() =>
                     {
-                        try
+                        lock (currentLoader)
                         {
-                            currentLoader.load(destinationData);
+                            try
+                            {
+                                currentLoader.load(destinationData);
+                            }
+                            catch (Exception)
+                            {
+                                loadingErrors.Add(
+                                    new JobException(
+                                        $"Unhandled exceptión proccessing loader '{item.GetID()}'.",
+                                        item.GetID(),
+                                        Phase.LOAGING
+                                    )
+                                );
+                            }
                         }
-                        catch (Exception)
-                        {
-                            loadingErrors.Add(
-                                new JobException(
-                                    $"Unhandled exceptión proccessing loader '{item.GetID()}'.",
-                                    item.GetID(),
-                                    Phase.LOAGING
-                                )
-                            );
-                        }
-                        
                     }));
                 }
 
