@@ -27,19 +27,30 @@ namespace TaskETL.Processors
 
         public ProcessorBuilder(ICollection<ILoader<DestinationType>> loaders)
         {
-            this.Model = new ProcessorCollection("ProccessorsCollection");
-            //this.Loaders = loaders;
+            this.Model = new ProcessorCollection("ProcessorsCollection");
             this.Loaders = new ConcurrentBag<ILoader<DestinationType>>(loaders);
         }
 
         public ProcessorBuilder<DestinationType> AddSource<SourceType>(
-            string proccessorID,
+            string processorID,
             IExtractor<SourceType> extractor,
             ITransformer<SourceType, DestinationType> transformer
         )
         {
-            this.Model.AddProcesor(this.CreateProcessor(proccessorID, extractor, transformer, this.Loaders));
+            this.Model.AddProcesor(this.CreateProcessor(processorID, extractor, transformer, this.Loaders));
             return this;
+        }
+
+        public ProcessorBuilder<DestinationType> AddSource(
+            string processorID,
+            IExtractor<DestinationType> extractor
+            )
+        {
+            return this.AddSource(
+                processorID,
+                extractor,
+                new NoActionTransformer<DestinationType>("")
+                );
         }
 
         private IProcessor CreateProcessor<SourceType>(
