@@ -49,7 +49,7 @@ namespace TaskETLTests.Processors
             IProcessor proccessor = new Processor<ICollection<SourceModel>, ICollection<SourceModel>>(
                 "ModelAProccessor",
                 extractor,
-                new SameTypeTransformer<ICollection<SourceModel>>("SameTypeTransformer"),
+                new NoActionTransformer<ICollection<SourceModel>>("SameTypeTransformer"),
                 loader
                 );
 
@@ -64,7 +64,7 @@ namespace TaskETLTests.Processors
             loader = new LoaderMock<ICollection<SourceModel>>();
             proccessor = new Processor<ICollection<SourceModel>, ICollection<SourceModel>>(
                 "ModelAAndBProccessor",
-                extractor, new SameTypeTransformer<ICollection<SourceModel>>("SameTypeTransformer"),
+                extractor, new NoActionTransformer<ICollection<SourceModel>>("SameTypeTransformer"),
                 loader
             );
 
@@ -83,13 +83,12 @@ namespace TaskETLTests.Processors
             string extractorID = "extractor_175";
             Exception exceptionToThrow = new Exception(errorMessage);
             IExtractor<object> extractor = new ExtractorWithErrorMock<object>(extractorID, exceptionToThrow);
-            ITransformer<object, object> transformer = new SameTypeTransformer<object>("transformer");
             ILoader<object> loader = new LoaderMock<object>();
 
             ProcessorBuilder<object> builder = new ProcessorBuilder<object>(loader);
 
             IProcessor faillingProccessor = 
-                builder.AddSource("FailingProccessor", extractor, transformer).Build();
+                builder.AddSource("FailingProccessor", extractor).Build();
 
             IEnumerable<Task<JobResult>> tasks = faillingProccessor.Process();
             Task.WaitAll(new List<Task>(tasks).ToArray());

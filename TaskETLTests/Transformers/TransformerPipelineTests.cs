@@ -16,8 +16,8 @@ namespace TaskETLTests.Transformers
         {
 
             new TransformerPipeline<object, object, object>(
-                new SameTypeTransformer<object>("Left transformer"),
-                new SameTypeTransformer<object>("Right transformer")
+                new NoActionTransformer<object>("Left transformer"),
+                new NoActionTransformer<object>("Right transformer")
             );
         }
 
