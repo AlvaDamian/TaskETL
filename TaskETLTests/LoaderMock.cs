@@ -24,7 +24,7 @@ namespace TaskETLTests.Mock
             this.ID = id;
         }
 
-        public void load(DestinationType data)
+        public void Load(DestinationType data)
         {
             this.Executed = true;
             this.DataReceived = data;

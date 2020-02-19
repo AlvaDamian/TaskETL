@@ -10,6 +10,6 @@
         /// Loads data into destination.
         /// </summary>
         /// <param name="data">Data to be loaded.</param>
-        void load(DestinationType data);
+        void Load(DestinationType data);
     }
 }
