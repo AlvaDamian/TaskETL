@@ -117,7 +117,7 @@ namespace TaskETL.Processors
                         {
                             try
                             {
-                                currentLoader.load(destinationData);
+                                currentLoader.Load(destinationData);
                             }
                             catch (Exception)
                             {

@@ -41,7 +41,7 @@ namespace TaskETL.loaders
             return this.ID;
         }
 
-        public void load(DestinationType data)
+        public void Load(DestinationType data)
         {
             Console.Out.WriteLine(this.ID + " --> " + this.stringProvider.Invoke(data));
         }

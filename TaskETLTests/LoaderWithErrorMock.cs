@@ -24,7 +24,7 @@ namespace TaskETLTests
             return this.ID;
         }
 
-        public void load(DestinationType data)
+        public void Load(DestinationType data)
         {
             throw this.ExceptionToThrow;
         }
