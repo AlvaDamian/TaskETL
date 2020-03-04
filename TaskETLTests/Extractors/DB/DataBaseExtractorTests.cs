@@ -1,7 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using Moq.Language.Flow;
-using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
@@ -10,7 +8,7 @@ using TaskETL.Extractors.DB;
 
 namespace TaskETLTests.Extractors.DB
 {
-    [Microsoft.VisualStudio.TestTools.UnitTesting.TestClass]
+    [TestClass]
     public class DataBaseExtractorTests
     {
         private struct Item
@@ -112,7 +110,7 @@ namespace TaskETLTests.Extractors.DB
         public void TestInitializesWithoutErrors()
         {
             Mock<IQueryDefinition> moqIQueryDefinition = new Mock<IQueryDefinition>();
-            DataBaseExtractor dataBaseExtractor = new DataBaseExtractor("", moqIQueryDefinition.Object);
+            _ = new DataBaseExtractor("", moqIQueryDefinition.Object);
         }
 
         [TestMethod]
@@ -145,7 +143,7 @@ namespace TaskETLTests.Extractors.DB
         }
 
         [TestMethod]
-        public void TestResturnsCorrectColumnNames()
+        public void TestResturnsExpectedColumnNames()
         {
             string sql = "SELECT code AS code, description AS description, price AS price FROM items;";
             Mock<IQueryDefinition> mock = new Mock<IQueryDefinition>();
@@ -205,6 +203,7 @@ namespace TaskETLTests.Extractors.DB
         {
             string sql = "SELECT description FROM items WHERE code = ?;";
             Mock<IQueryDefinition> mock = new Mock<IQueryDefinition>();
+            
 
             mock.Setup(_ => _.Connection()).Returns(this.connection);
             mock.Setup(_ => _.Query()).Returns(sql);
@@ -215,12 +214,25 @@ namespace TaskETLTests.Extractors.DB
             DataBaseExtractor model = new DataBaseExtractor("", mock.Object);
             IQueryResult result = model.Extract();
 
-            IEnumerator<IInvocation> invocationsEnumerator = mock.Invocations.GetEnumerator();
+            Assert.AreEqual(3, mock.Invocations.Count);
 
-            Assert.IsTrue(invocationsEnumerator.MoveNext());
-            Assert.IsTrue(invocationsEnumerator.MoveNext());
-            Assert.IsTrue(invocationsEnumerator.MoveNext());
-            Assert.AreEqual("Parameters", invocationsEnumerator.Current.Method.Name);
+            IEnumerator<IInvocation> invocationsEnumerator = mock.Invocations.GetEnumerator();
+            List<string> calledMethods = new List<string>();
+
+            invocationsEnumerator.MoveNext();
+            IInvocation invocation = invocationsEnumerator.Current;
+            
+            calledMethods.Add(invocation.Method.Name);
+
+            invocationsEnumerator.MoveNext();
+            invocation = invocationsEnumerator.Current;
+            calledMethods.Add(invocation.Method.Name);
+
+            invocationsEnumerator.MoveNext();
+            invocation = invocationsEnumerator.Current;
+            calledMethods.Add(invocation.Method.Name);
+
+            CollectionAssert.Contains(calledMethods, "Parameters");
         }
     }
 }
