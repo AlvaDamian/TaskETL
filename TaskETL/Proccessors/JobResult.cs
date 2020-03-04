@@ -5,16 +5,23 @@ namespace TaskETL.Processors
     public class JobResult
     {
         private ICollection<JobException> _errors;
+        public string ExtractorID { get; set; }
+        public string TransformerID { get; set; }
+        public string LoaderID { get; set; }
 
         public bool CompletedWithouErrors { get { return this._errors.Count == 0; } }
         public IEnumerable<JobException> Errors { get { return this._errors; } }
 
-        public JobResult()
+        public JobResult(string extractorID, string transformerID, string loaderID)
         {
+            this.ExtractorID = extractorID;
+            this.TransformerID = transformerID;
+            this.LoaderID = loaderID;
             this._errors = new List<JobException>();
         }
 
-        private JobResult(JobException error) : this()
+        private JobResult(string extractorID, string transformerID, string loaderID, JobException error)
+            : this(extractorID, transformerID, loaderID)
         {
             this.AddError(error);
         }
@@ -24,26 +31,30 @@ namespace TaskETL.Processors
             this._errors.Add(error);
         }
 
-        public static JobResult BuildCompletedWithoutErrors()
+        public static JobResult BuildCompletedWithoutErrors(
+            string extractorID, string transformerID, string loaderID
+            )
         {
-            return new JobResult();
+            return new JobResult(extractorID, transformerID, loaderID);
         }
 
-        public static JobResult BuildWithError(JobException error)
+        public static JobResult BuildWithError(
+            string extractorID, string transformerID, string loaderID, JobException error
+            )
         {
-            return new JobResult(error);
+            return new JobResult(extractorID, transformerID, loaderID, error);
         }
 
-        public static JobResult Build(IEnumerable<JobException> errors)
-        {
-            JobResult ret = BuildCompletedWithoutErrors();
+        //public static JobResult Build(IEnumerable<JobException> errors)
+        //{
+        //    JobResult ret = BuildCompletedWithoutErrors();
 
-            foreach (var item in errors)
-            {
-                ret.AddError(item);
-            }
+        //    foreach (var item in errors)
+        //    {
+        //        ret.AddError(item);
+        //    }
 
-            return ret;
-        }
+        //    return ret;
+        //}
     }
 }

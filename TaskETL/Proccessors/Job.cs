@@ -25,27 +25,31 @@ namespace TaskETL.Processors
     {
         private readonly IExtractor<SourceType> Extractor;
         private readonly ITransformer<SourceType, DestinationType> Transformer;
-        private readonly IEnumerable<ILoader<DestinationType>> Loaders;
+        //private readonly IEnumerable<ILoader<DestinationType>> Loaders;
+        private ILoader<DestinationType> loader;
 
         public Job(
             IExtractor<SourceType> extractor,
             ITransformer<SourceType, DestinationType> transformer,
             ILoader<DestinationType> loader
             )
-            : this(extractor, transformer, new List<ILoader<DestinationType>>() { loader })
-        {
-        }
-
-        public Job(
-            IExtractor<SourceType> extractor,
-            ITransformer<SourceType, DestinationType> transformer,
-            ICollection<ILoader<DestinationType>> loaders
-        )
+            //: this(extractor, transformer, new List<ILoader<DestinationType>>() { loader })
         {
             this.Extractor = extractor;
             this.Transformer = transformer;
-            this.Loaders = new ConcurrentBag<ILoader<DestinationType>>(loaders);
+            this.loader = loader;
         }
+
+        //public Job(
+        //    IExtractor<SourceType> extractor,
+        //    ITransformer<SourceType, DestinationType> transformer,
+        //    ICollection<ILoader<DestinationType>> loaders
+        //)
+        //{
+        //    this.Extractor = extractor;
+        //    this.Transformer = transformer;
+        //    this.Loaders = new ConcurrentBag<ILoader<DestinationType>>(loaders);
+        //}
 
         /// <summary>
         /// <para>
@@ -74,6 +78,9 @@ namespace TaskETL.Processors
                     catch (Exception ExtractionException)
                     {
                         return JobResult.BuildWithError(
+                            this.Extractor.GetID(),
+                            this.Transformer.GetID(),
+                            this.loader.GetID(),
                             new JobException(
                                 $"Unhandled exception proccesing extractor '{this.Extractor.GetID()}'.",
                                 this.Extractor.GetID(),
@@ -93,6 +100,9 @@ namespace TaskETL.Processors
                     catch (Exception TransformationException)
                     {
                         return JobResult.BuildWithError(
+                            this.Extractor.GetID(),
+                            this.Transformer.GetID(),
+                            this.loader.GetID(),
                             new JobException(
                                 $"Unhandled exception processing transformer '{this.Transformer.GetID()}'.",
                                 this.Transformer.GetID(),
@@ -102,39 +112,67 @@ namespace TaskETL.Processors
                         );
                     }
                 }
-                
 
-                BlockingCollection<JobException> loadingErrors = new BlockingCollection<JobException>();
-                BlockingCollection<Task> loadersTasks = new BlockingCollection<Task>();
 
-                foreach (var item in this.Loaders)
+                //BlockingCollection<JobException> loadingErrors = new BlockingCollection<JobException>();
+                //BlockingCollection<Task> loadersTasks = new BlockingCollection<Task>();
+                //
+                //foreach (var item in this.Loaders)
+                //{
+                //    ILoader<DestinationType> currentLoader = item;
+                //
+                //    loadersTasks.Add(Task.Run(() =>
+                //    {
+                //        lock (currentLoader)
+                //        {
+                //            try
+                //            {
+                //                currentLoader.Load(destinationData);
+                //            }
+                //            catch (Exception)
+                //            {
+                //                loadingErrors.Add(
+                //                    new JobException(
+                //                        $"Unhandled exceptión proccessing loader '{item.GetID()}'.",
+                //                        item.GetID(),
+                //                        Phase.LOAGING
+                //                    )
+                //                );
+                //            }
+                //        }
+                //    }));
+                //}
+                //
+                //Task.WaitAll(new List<Task>(loadersTasks).ToArray());
+                //return JobResult.Build(loadingErrors);
+
+                lock (this.loader)
                 {
-                    ILoader<DestinationType> currentLoader = item;
-
-                    loadersTasks.Add(Task.Run(() =>
+                    try
                     {
-                        lock (currentLoader)
-                        {
-                            try
-                            {
-                                currentLoader.Load(destinationData);
-                            }
-                            catch (Exception)
-                            {
-                                loadingErrors.Add(
-                                    new JobException(
-                                        $"Unhandled exceptión proccessing loader '{item.GetID()}'.",
-                                        item.GetID(),
-                                        Phase.LOAGING
-                                    )
-                                );
-                            }
-                        }
-                    }));
+                        this.loader.Load(destinationData);
+                    }
+                    catch (Exception eLoading)
+                    {
+                        return JobResult.BuildWithError(
+                            this.Extractor.GetID(),
+                            this.Transformer.GetID(),
+                            this.loader.GetID(),
+                            new JobException(
+                                $"Unhandled exception processing loader '{this.loader.GetID()}'.",
+                                loader.GetID(),
+                                Phase.LOAGING,
+                                eLoading
+                                )
+                            );
+                    }
                 }
 
-                Task.WaitAll(new List<Task>(loadersTasks).ToArray());
-                return JobResult.Build(loadingErrors);
+                return JobResult.BuildCompletedWithoutErrors(
+                            this.Extractor.GetID(),
+                            this.Transformer.GetID(),
+                            this.loader.GetID()
+                            );
             });
         }
     }
