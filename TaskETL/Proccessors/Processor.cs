@@ -22,6 +22,8 @@ namespace TaskETL.Processors
         private readonly IEnumerable<Job<SourceType, DestinationType>> Jobs;
 
         private readonly IEnumerable<IDisposable> ToDispose;
+        private ConcurrentBag<IReport> Reports;
+        private ConcurrentBag<Task> OnJobCompleteTasks;
 
         /// <summary>
         /// <para>
@@ -61,6 +63,8 @@ namespace TaskETL.Processors
         {
             this.ID = id;
             ConcurrentBag<IDisposable> disposables = new ConcurrentBag<IDisposable>();
+            this.Reports = new ConcurrentBag<IReport>();
+            this.OnJobCompleteTasks = new ConcurrentBag<Task>();
             ConcurrentBag<Job<SourceType, DestinationType>>
                 jobs = new ConcurrentBag<Job<SourceType, DestinationType>>();
 
@@ -111,15 +115,45 @@ namespace TaskETL.Processors
 
             foreach (var item in this.Jobs)
             {
-                ret.Add(item.Work());
-            }
+                Task<JobResult> task = item.Work();
+                task = this.ForEachReport(task);//wrapped task
+                //Task<JobResult> onCompleteTask = ;
+                //task.GetAwaiter().on
+                //task.ContinueWith<JobResult>(this.OnCompleteTask);
+                //this.OnJobCompleteTasks.Add(task.ContinueWith(this.OnCompleteTask));
+                ret.Add(task);
 
-            foreach (var item in ret)
-            {
-                item.Start();
+                
+                task.Start();
             }
 
             return ret;
+        }
+
+        /// <summary>
+        /// Wraps a task for calling all reports when it is done.
+        /// </summary>
+        /// <param name="jobResult"></param>
+        /// <returns></returns>
+        private Task<JobResult> ForEachReport(Task<JobResult> realJob)
+        {
+            if (this.Reports.Count == 0)
+            {
+                return realJob;
+            }
+
+            return new Task<JobResult>(() =>
+            {
+                realJob.Start();
+                JobResult result = realJob.Result;
+
+                foreach (var item in this.Reports)
+                {
+                    item.Report(result);
+                }
+
+                return result;
+            });
         }
 
         public string GetID()
@@ -133,6 +167,16 @@ namespace TaskETL.Processors
             {
                 item.Dispose();
             }
+        }
+
+        public void AddReport(IReport report)
+        {
+            this.Reports.Add(report);
+        }
+
+        public void SetReports(IEnumerable<IReport> reports)
+        {
+            this.Reports = new ConcurrentBag<IReport>(reports);
         }
     }
 }

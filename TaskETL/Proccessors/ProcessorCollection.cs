@@ -11,11 +11,13 @@ namespace TaskETL.Processors
     {
         private readonly string ID;
         private ConcurrentBag<IProcessor> Processors;
+        private ICollection<IReport> Reports;
 
         public ProcessorCollection(string id)
         {
             this.ID = id;
             this.Processors = new ConcurrentBag<IProcessor>();
+            this.Reports = new List<IReport>();
         }
 
         /// <summary>
@@ -25,6 +27,16 @@ namespace TaskETL.Processors
         public void AddProcesor(IProcessor processor)
         {
             this.Processors.Add(processor);
+        }
+
+        public void AddReport(IReport report)
+        {
+            this.Reports.Add(report);
+        }
+
+        public void SetReports(IEnumerable<IReport> reports)
+        {
+            this.Reports = new List<IReport>(reports);
         }
 
         public void Dispose()
@@ -47,6 +59,8 @@ namespace TaskETL.Processors
 
             foreach (var item in this.Processors)
             {
+                item.SetReports(this.Reports);
+
                 foreach (var task in item.Process())
                 {
                     ret.Add(task);

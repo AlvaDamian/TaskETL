@@ -7,6 +7,8 @@ using TaskETL.Extractors;
 using TaskETL.Transformers;
 using TaskETL.Loaders;
 using System;
+using Moq;
+using TaskETL;
 
 namespace TaskETLTests.Processors
 {
@@ -77,7 +79,7 @@ namespace TaskETLTests.Processors
         }
 
         [TestMethod]
-        public void TestResultsHasErrorWhenExtractorFails()
+        public void TestResultHasErrorWhenExtractorFails()
         {
             string errorMessage = "Expected exception.";
             string extractorID = "extractor_175";
@@ -116,7 +118,7 @@ namespace TaskETLTests.Processors
         }
 
         [TestMethod]
-        public void TestResultsHasErrorWhenTransformerFails()
+        public void TestResultHasErrorWhenTransformerFails()
         {
             string errorMessage = "TransformationError";
             string transformerID = "transformer_ 99 9 9 99 ";
@@ -157,7 +159,7 @@ namespace TaskETLTests.Processors
         }
 
         [TestMethod]
-        public void TestResultsHasErrorWhenLoadingFails()
+        public void TestResultHasErrorWhenLoaderFails()
         {
             string errorMessage = "LoadingException";
             string loaderID = "1111...55555";
@@ -198,7 +200,7 @@ namespace TaskETLTests.Processors
         }
 
         [TestMethod]
-        public void TestWillNotReachTransformationErrorIfThereIsExtractionError()
+        public void TestWillNotReachTransformerIfThereIsAnExtractionError()
         {
             IExtractor<object> extractor = new ExtractorWithErrorMock<object>(new Exception("ExtractorError"));
             TransformerMock<object, object> transformer = new TransformerMock<object, object>(new object());
@@ -216,7 +218,7 @@ namespace TaskETLTests.Processors
         }
 
         [TestMethod]
-        public void TestWilNotReachLoadingErrorIfThereIsTranformationError()
+        public void TestWilNotReachLoaderIfThereIsTranformationError()
         {
             IExtractor<object> extractor = new ExtractorMock<object>();
             ITransformer<object, object> transformer = new TransformerWithErrorMock<object, object>(new Exception("error"));
@@ -298,6 +300,147 @@ namespace TaskETLTests.Processors
             processor.Dispose();
             Assert.IsTrue(extractor.Disposed);
             Assert.IsTrue(transformer.Disposed);
+        }
+
+        [TestMethod]
+        public void TestSendsResultToSingleReport()
+        {
+            object o = new object();
+            Mock<IReport> mockReport = new Mock<IReport>();
+            Mock<IExtractor<object>> mockExtractor = new Mock<IExtractor<object>>();
+            Mock<ITransformer<object, object>> mockTransformer = new Mock<ITransformer<object, object>>();
+            Mock<ILoader<object>> mockLoader = new Mock<ILoader<object>>();
+
+            mockExtractor.Setup(_ => _.GetID()).Returns("extractor");
+            mockExtractor.Setup(_ => _.Extract()).Returns(o);
+
+            mockTransformer.Setup(_ => _.GetID()).Returns("transformer");
+            mockTransformer.Setup(_ => _.transform(o)).Returns(o);
+
+            mockLoader.Setup(_ => _.GetID()).Returns("loader");
+
+            ProcessorBuilder<object> builder = new ProcessorBuilder<object>(mockLoader.Object);
+            builder.AddSource("mock processor", mockExtractor.Object, mockTransformer.Object);
+            builder.AddReport(mockReport.Object);
+
+            IProcessor processor = builder.Build();
+            IEnumerable<Task<JobResult>> tasks = processor.Process();
+            Task.WaitAll(new List<Task<JobResult>>(tasks).ToArray());
+
+            IInvocationList invocationList = mockReport.Invocations;
+
+            Assert.AreEqual(1, invocationList.Count);
+
+            IEnumerator<IInvocation> invocationEnumerator = invocationList.GetEnumerator();
+            invocationEnumerator.MoveNext();
+
+            IInvocation invocation = invocationEnumerator.Current;
+            Assert.AreEqual("Report", invocation.Method.Name);
+        }
+
+        [TestMethod]
+        public void TestSendResultToMultipleReports()
+        {
+            object o = new object();
+            Mock<IReport> mockReportOne = new Mock<IReport>();
+            Mock<IReport> mockReportTwo = new Mock<IReport>();
+            Mock<IExtractor<object>> mockExtractor = new Mock<IExtractor<object>>();
+            Mock<ITransformer<object, object>> mockTransformer = new Mock<ITransformer<object, object>>();
+            Mock<ILoader<object>> mockLoader = new Mock<ILoader<object>>();
+
+            mockExtractor.Setup(_ => _.GetID()).Returns("extractor");
+            mockExtractor.Setup(_ => _.Extract()).Returns(o);
+
+            mockTransformer.Setup(_ => _.GetID()).Returns("transformer");
+            mockTransformer.Setup(_ => _.transform(o)).Returns(o);
+
+            mockLoader.Setup(_ => _.GetID()).Returns("loader");
+
+            ProcessorBuilder<object> builder = new ProcessorBuilder<object>(mockLoader.Object);
+            builder.AddSource("mock processor", mockExtractor.Object, mockTransformer.Object);
+            builder.AddReport(mockReportOne.Object);
+            builder.AddReport(mockReportTwo.Object);
+
+            IProcessor processor = builder.Build();
+            IEnumerable<Task<JobResult>> tasks = processor.Process();
+            Task.WaitAll(new List<Task<JobResult>>(tasks).ToArray());
+
+            //Mock one check
+            IInvocationList invocationList = mockReportOne.Invocations;
+
+            Assert.AreEqual(1, invocationList.Count);
+
+            IEnumerator<IInvocation> invocationEnumerator = invocationList.GetEnumerator();
+            invocationEnumerator.MoveNext();
+
+            IInvocation invocation = invocationEnumerator.Current;
+            Assert.AreEqual("Report", invocation.Method.Name);
+
+            //Mock two check
+            invocationList = mockReportTwo.Invocations;
+
+            Assert.AreEqual(1, invocationList.Count);
+
+            invocationEnumerator = invocationList.GetEnumerator();
+            invocationEnumerator.MoveNext();
+
+            invocation = invocationEnumerator.Current;
+            Assert.AreEqual("Report", invocation.Method.Name);
+        }
+
+        [TestMethod]
+        public void TestReplacesReportsWhenUsingSetReports()
+        {
+            object o = new object();
+            Mock<IReport> mockReportOne = new Mock<IReport>();
+            Mock<IReport> mockReportTwo = new Mock<IReport>();
+            Mock<IReport> mockReportThree = new Mock<IReport>();
+            Mock<IExtractor<object>> mockExtractor = new Mock<IExtractor<object>>();
+            Mock<ITransformer<object, object>> mockTransformer = new Mock<ITransformer<object, object>>();
+            Mock<ILoader<object>> mockLoader = new Mock<ILoader<object>>();
+
+            mockExtractor.Setup(_ => _.GetID()).Returns("extractor");
+            mockExtractor.Setup(_ => _.Extract()).Returns(o);
+
+            mockTransformer.Setup(_ => _.GetID()).Returns("transformer");
+            mockTransformer.Setup(_ => _.transform(o)).Returns(o);
+
+            mockLoader.Setup(_ => _.GetID()).Returns("loader");
+
+            ProcessorBuilder<object> builder = new ProcessorBuilder<object>(mockLoader.Object);
+            builder.AddSource("mock processor", mockExtractor.Object, mockTransformer.Object);
+            builder.AddReport(mockReportOne.Object);
+            builder.SetReports(new List<IReport>() { mockReportTwo.Object, mockReportThree.Object });
+
+            IProcessor processor = builder.Build();
+            IEnumerable<Task<JobResult>> tasks = processor.Process();
+            Task.WaitAll(new List<Task<JobResult>>(tasks).ToArray());
+
+            //Mock one check. Should not be invoked
+            IInvocationList invocationList = mockReportOne.Invocations;
+            Assert.AreEqual(0, invocationList.Count);
+
+            //Mock two check
+            invocationList = mockReportTwo.Invocations;
+
+            Assert.AreEqual(1, invocationList.Count);
+
+            IEnumerator<IInvocation> invocationEnumerator = invocationList.GetEnumerator();
+            invocationEnumerator.MoveNext();
+
+            IInvocation invocation = invocationEnumerator.Current;
+            Assert.AreEqual("Report", invocation.Method.Name);
+
+            //Mock three check
+            invocationList = mockReportTwo.Invocations;
+
+            Assert.AreEqual(1, invocationList.Count);
+
+            invocationEnumerator = invocationList.GetEnumerator();
+            invocationEnumerator.MoveNext();
+
+            invocation = invocationEnumerator.Current;
+            Assert.AreEqual("Report", invocation.Method.Name);
         }
     }
 }

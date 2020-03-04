@@ -31,5 +31,8 @@ namespace TaskETL.Processors
         /// <returns>A running <see cref="Task{TResult}"/> for
         /// each extractor.</returns>
         IEnumerable<Task<JobResult>> Process();
+
+        void AddReport(IReport report);
+        void SetReports(IEnumerable<IReport> reports);
     }
 }
