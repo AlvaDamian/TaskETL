@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
-using System.Text;
 
 namespace TaskETL.Extractors.DB
 {
@@ -36,7 +34,7 @@ namespace TaskETL.Extractors.DB
             {
                 connection.Open();
             }
-            
+
 
             DbCommand command = connection.CreateCommand();
             command.Connection = connection;
@@ -50,7 +48,7 @@ namespace TaskETL.Extractors.DB
                 parameter.Value = item.Value;
                 parameter.DbType = item.Type;
                 parameter.Direction = item.Direction;
-                
+
                 if (item.Size.HasValue)
                 {
                     parameter.Size = item.Size.Value;
@@ -60,7 +58,7 @@ namespace TaskETL.Extractors.DB
             }
 
             DbDataReader reader = command.ExecuteReader();
-            
+
             int columnCount = reader.FieldCount;
 
             for (int i = 0; i < columnCount; i++)
@@ -71,7 +69,7 @@ namespace TaskETL.Extractors.DB
             while (reader.Read())
             {
                 object[] currentRow = new object[columnCount];
-                
+
                 reader.GetValues(currentRow);
                 rows.Add(currentRow);
             }

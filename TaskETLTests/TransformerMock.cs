@@ -1,4 +1,5 @@
 ﻿using System;
+
 using TaskETL.Transformers;
 
 namespace TaskETLTests.Mock
@@ -30,7 +31,7 @@ namespace TaskETLTests.Mock
             return this.ID;
         }
 
-        public DestinationType transform(SourceType source)
+        public DestinationType Transform(SourceType source)
         {
             this.Executed = true;
             return this.AlreadyTransformedData;

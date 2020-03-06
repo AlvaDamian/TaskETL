@@ -1,14 +1,18 @@
-﻿using TaskETLTests.Mock;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+using Moq;
+
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using TaskETL.Processors;
-using TaskETL.Extractors;
-using TaskETL.Transformers;
-using TaskETL.Loaders;
-using System;
-using Moq;
+
 using TaskETL;
+using TaskETL.Extractors;
+using TaskETL.Loaders;
+using TaskETL.Processors;
+using TaskETL.Transformers;
+
+using TaskETLTests.Mock;
 
 namespace TaskETLTests.Processors
 {
@@ -32,15 +36,15 @@ namespace TaskETLTests.Processors
 
             SourceModel modelA = new SourceModel()
             {
-                StringData= "testing model A",
-                Int32Data= 33
+                StringData = "testing model A",
+                Int32Data = 33
             };
 
             SourceModel modelB = new SourceModel()
             {
-                StringData= "testing model B",
-                DecimalData= 54.25m,
-                Int64Data= 999999
+                StringData = "testing model B",
+                DecimalData = 54.25m,
+                Int64Data = 999999
             };
 
             ICollection<SourceModel> collectionWithModelA = new List<SourceModel>() { modelA };
@@ -89,7 +93,7 @@ namespace TaskETLTests.Processors
 
             ProcessorBuilder<object> builder = new ProcessorBuilder<object>(loader);
 
-            IProcessor faillingProccessor = 
+            IProcessor faillingProccessor =
                 builder.AddSource("FailingProccessor", extractor).Build();
 
             IEnumerable<Task<JobResult>> tasks = faillingProccessor.Process();
@@ -127,7 +131,7 @@ namespace TaskETLTests.Processors
             ITransformer<object, object> tranformer = new TransformerWithErrorMock<object, object>(transformerID, exceptionToThrow);
             ILoader<object> loader = new LoaderMock<object>();
 
-            IProcessor proccessor = 
+            IProcessor proccessor =
                 new ProcessorBuilder<object>(loader)
                 .AddSource("ProccessorWithTransformationError", extractor, tranformer)
                 .Build();
@@ -168,7 +172,7 @@ namespace TaskETLTests.Processors
             ITransformer<object, object> transformer = new TransformerMock<object, object>(new object());
             ILoader<object> loader = new LoaderWithErrorMock<object>(loaderID, exceptionToThrow);
 
-            IProcessor proccessor = 
+            IProcessor proccessor =
                 new ProcessorBuilder<object>(loader)
                 .AddSource("ProccessWithLoadingError", extractor, transformer)
                 .Build();
@@ -242,7 +246,7 @@ namespace TaskETLTests.Processors
             TransformerMock<object, object> transformer = new TransformerMock<object, object>(new object());
             LoaderMock<object> loader = new LoaderMock<object>();
 
-            IProcessor processor = 
+            IProcessor processor =
                 new ProcessorBuilder<object>(loader)
                 .AddSource("process", extractor, transformer)
                 .Build();
@@ -315,7 +319,7 @@ namespace TaskETLTests.Processors
             mockExtractor.Setup(_ => _.Extract()).Returns(o);
 
             mockTransformer.Setup(_ => _.GetID()).Returns("transformer");
-            mockTransformer.Setup(_ => _.transform(o)).Returns(o);
+            mockTransformer.Setup(_ => _.Transform(o)).Returns(o);
 
             mockLoader.Setup(_ => _.GetID()).Returns("loader");
 
@@ -352,7 +356,7 @@ namespace TaskETLTests.Processors
             mockExtractor.Setup(_ => _.Extract()).Returns(o);
 
             mockTransformer.Setup(_ => _.GetID()).Returns("transformer");
-            mockTransformer.Setup(_ => _.transform(o)).Returns(o);
+            mockTransformer.Setup(_ => _.Transform(o)).Returns(o);
 
             mockLoader.Setup(_ => _.GetID()).Returns("loader");
 
@@ -403,7 +407,7 @@ namespace TaskETLTests.Processors
             mockExtractor.Setup(_ => _.Extract()).Returns(o);
 
             mockTransformer.Setup(_ => _.GetID()).Returns("transformer");
-            mockTransformer.Setup(_ => _.transform(o)).Returns(o);
+            mockTransformer.Setup(_ => _.Transform(o)).Returns(o);
 
             mockLoader.Setup(_ => _.GetID()).Returns("loader");
 

@@ -1,10 +1,9 @@
-﻿using TaskETL.Extractors;
+﻿using System;
+using System.Threading.Tasks;
+
+using TaskETL.Extractors;
 using TaskETL.Loaders;
 using TaskETL.Transformers;
-using System;
-using System.Threading.Tasks;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 
 namespace TaskETL.Processors
 {
@@ -21,19 +20,19 @@ namespace TaskETL.Processors
     /// </summary>
     /// <typeparam name="SourceType">Source data type.</typeparam>
     /// <typeparam name="DestinationType">Destination data type.</typeparam>
-    class Job<SourceType, DestinationType>
+    internal class Job<SourceType, DestinationType>
     {
         private readonly IExtractor<SourceType> Extractor;
         private readonly ITransformer<SourceType, DestinationType> Transformer;
         //private readonly IEnumerable<ILoader<DestinationType>> Loaders;
-        private ILoader<DestinationType> loader;
+        private readonly ILoader<DestinationType> loader;
 
         public Job(
             IExtractor<SourceType> extractor,
             ITransformer<SourceType, DestinationType> transformer,
             ILoader<DestinationType> loader
             )
-            //: this(extractor, transformer, new List<ILoader<DestinationType>>() { loader })
+        //: this(extractor, transformer, new List<ILoader<DestinationType>>() { loader })
         {
             this.Extractor = extractor;
             this.Transformer = transformer;
@@ -95,7 +94,7 @@ namespace TaskETL.Processors
                 {
                     try
                     {
-                        destinationData = this.Transformer.transform(data);
+                        destinationData = this.Transformer.Transform(data);
                     }
                     catch (Exception TransformationException)
                     {
@@ -160,7 +159,7 @@ namespace TaskETL.Processors
                             this.loader.GetID(),
                             new JobException(
                                 $"Unhandled exception processing loader '{this.loader.GetID()}'.",
-                                loader.GetID(),
+                                this.loader.GetID(),
                                 Phase.LOAGING,
                                 eLoading
                                 )

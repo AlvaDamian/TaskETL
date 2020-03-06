@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace TaskETL.Extractors
+﻿namespace TaskETL.Extractors
 {
     /// <summary>
     /// A extractor that will return always same data. Like data was

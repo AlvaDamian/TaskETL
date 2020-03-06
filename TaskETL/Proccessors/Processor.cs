@@ -1,10 +1,11 @@
-﻿using TaskETL.Extractors;
-using TaskETL.Loaders;
-using TaskETL.Transformers;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using System;
-using System.Collections.Concurrent;
+
+using TaskETL.Extractors;
+using TaskETL.Loaders;
+using TaskETL.Transformers;
 
 namespace TaskETL.Processors
 {
@@ -23,7 +24,7 @@ namespace TaskETL.Processors
 
         private readonly IEnumerable<IDisposable> ToDispose;
         private ConcurrentBag<IReport> Reports;
-        private ConcurrentBag<Task> OnJobCompleteTasks;
+        private readonly ConcurrentBag<Task> OnJobCompleteTasks;
 
         /// <summary>
         /// <para>
@@ -71,13 +72,13 @@ namespace TaskETL.Processors
             //Add extractor for dispose
             if (extractor is IDisposable)
             {
-                disposables.Add((IDisposable) extractor);
+                disposables.Add((IDisposable)extractor);
             }
 
             //Add transfomer for dispose 
             if (transformer is IDisposable)
             {
-                disposables.Add((IDisposable) transformer);
+                disposables.Add((IDisposable)transformer);
             }
 
             foreach (var item in loaders)
@@ -87,7 +88,7 @@ namespace TaskETL.Processors
                 //Add current loader for dispose
                 if (item is IDisposable)
                 {
-                    disposables.Add((IDisposable) item);
+                    disposables.Add((IDisposable)item);
                 }
             }
 
@@ -123,7 +124,7 @@ namespace TaskETL.Processors
                 //this.OnJobCompleteTasks.Add(task.ContinueWith(this.OnCompleteTask));
                 ret.Add(task);
 
-                
+
                 task.Start();
             }
 

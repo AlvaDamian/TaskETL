@@ -20,7 +20,7 @@
             return this.ID;
         }
 
-        public SourceAndDestinationType transform(SourceAndDestinationType source)
+        public SourceAndDestinationType Transform(SourceAndDestinationType source)
         {
             return source;
         }

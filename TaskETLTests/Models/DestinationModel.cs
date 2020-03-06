@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 
 namespace TaskETLTests.Mock
 {
-    class DestinationModel
+    internal class DestinationModel
     {
-        private ICollection<string> _strings;
+        private readonly ICollection<string> _strings;
 
 
         public IEnumerable<string> StringEnumerable { get => this._strings; }

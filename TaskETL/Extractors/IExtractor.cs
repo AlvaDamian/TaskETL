@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace TaskETL.Extractors
+﻿namespace TaskETL.Extractors
 {
     /// <summary>
     /// Extracts data from a source.

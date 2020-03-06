@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace TaskETL.Transformers
 {
@@ -69,7 +67,7 @@ namespace TaskETL.Transformers
                 transformer
                 );
         }
-        
+
         /// <summary>
         /// Pipes another transformer before this one, changing the
         /// source data type.
@@ -94,21 +92,21 @@ namespace TaskETL.Transformers
             return this.LeftTransformer.GetID();
         }
 
-        public DestinationType transform(SourceType source)
+        public DestinationType Transform(SourceType source)
         {
-            return this.RightTransformer.transform(this.LeftTransformer.transform(source));
+            return this.RightTransformer.Transform(this.LeftTransformer.Transform(source));
         }
 
         public void Dispose()
         {
             if (this.LeftTransformer is IDisposable)
             {
-                ((IDisposable) this.LeftTransformer).Dispose();
+                ((IDisposable)this.LeftTransformer).Dispose();
             }
 
             if (this.RightTransformer is IDisposable)
             {
-                ((IDisposable) this.RightTransformer).Dispose();
+                ((IDisposable)this.RightTransformer).Dispose();
             }
         }
     }

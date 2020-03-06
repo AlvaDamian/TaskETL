@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace TaskETL.Enumerables
+﻿namespace TaskETL.Enumerables
 {
     public enum ComponentStatus
     {

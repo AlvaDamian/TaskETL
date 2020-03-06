@@ -1,9 +1,10 @@
-﻿using TaskETL.Extractors;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+
+using TaskETL.Extractors;
 using TaskETL.Loaders;
 using TaskETL.Transformers;
-using System.Collections.Generic;
-using System;
-using System.Collections.Concurrent;
 
 namespace TaskETL.Processors
 {

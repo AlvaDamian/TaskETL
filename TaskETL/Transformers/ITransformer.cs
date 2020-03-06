@@ -7,6 +7,6 @@
     /// <typeparam name="DestinationType"></typeparam>
     public interface ITransformer<SourceType, DestinationType> : IETLComponent
     {
-        DestinationType transform(SourceType source);
+        DestinationType Transform(SourceType source);
     }
 }

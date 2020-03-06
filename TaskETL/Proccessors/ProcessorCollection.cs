@@ -7,10 +7,10 @@ namespace TaskETL.Processors
     /// <summary>
     /// Collection of processors.
     /// </summary>
-    class ProcessorCollection : IProcessor
+    internal class ProcessorCollection : IProcessor
     {
         private readonly string ID;
-        private ConcurrentBag<IProcessor> Processors;
+        private readonly ConcurrentBag<IProcessor> Processors;
         private ICollection<IReport> Reports;
 
         public ProcessorCollection(string id)
@@ -55,7 +55,7 @@ namespace TaskETL.Processors
         public IEnumerable<Task<JobResult>> Process()
         {
             ConcurrentBag<Task<JobResult>> ret = new ConcurrentBag<Task<JobResult>>();
-            
+
 
             foreach (var item in this.Processors)
             {

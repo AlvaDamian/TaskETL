@@ -1,13 +1,14 @@
 ﻿using System;
+
 using TaskETL.Loaders;
 
 namespace TaskETLTests
 {
-    class LoaderWithErrorMock<DestinationType> : ILoader<DestinationType>
+    internal class LoaderWithErrorMock<DestinationType> : ILoader<DestinationType>
     {
         public static string DEFAULT_ID = "LoaderWithErrorMock";
-        private string ID;
-        private Exception ExceptionToThrow;
+        private readonly string ID;
+        private readonly Exception ExceptionToThrow;
 
         public LoaderWithErrorMock(Exception exceptionToThrow) : this(DEFAULT_ID, exceptionToThrow)
         {

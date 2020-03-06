@@ -1,5 +1,6 @@
-﻿using TaskETL.Loaders;
-using System;
+﻿using System;
+
+using TaskETL.Loaders;
 
 namespace TaskETL.loaders
 {
@@ -11,7 +12,7 @@ namespace TaskETL.loaders
     public class ConsoleLoader<DestinationType> : ILoader<DestinationType>
     {
         private readonly string ID;
-        private Func<DestinationType, string> stringProvider;
+        private readonly Func<DestinationType, string> stringProvider;
 
         /// <summary>
         /// Creates a <see cref="ConsoleLoader{DestinationType}"/> that

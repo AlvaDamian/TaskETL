@@ -1,9 +1,9 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
+
 using System.Collections.Generic;
-using System.Text;
 
 using TaskETL.Transformers;
+
 using TaskETLTests.Mock;
 
 namespace TaskETLTests.Transformers
@@ -40,9 +40,9 @@ namespace TaskETLTests.Transformers
                     );
 
             SourceModel sourceData = new SourceModel();
-            DestinationModel resultData = tranformer.transform(sourceData);
+            DestinationModel resultData = tranformer.Transform(sourceData);
 
-            
+
             Assert.IsNotNull(resultData);
 
             IEnumerator<string> enumerator = resultData.StringEnumerable.GetEnumerator();
@@ -67,7 +67,7 @@ namespace TaskETLTests.Transformers
                     rightTransformer
                     );
 
-            tranformer.transform(new SourceModel());
+            tranformer.Transform(new SourceModel());
 
             Assert.IsTrue(leftTransformer.Executed);
             Assert.IsTrue(rightTransformer.Executed);
@@ -120,7 +120,7 @@ namespace TaskETLTests.Transformers
                 .PipePush(thirdTransformer)
                 .PipePush(fourthTransformer);
 
-            newTransformer.transform(new SourceModel());
+            newTransformer.Transform(new SourceModel());
 
             Assert.IsTrue(firstTransformer.Executed);
             Assert.IsTrue(secondTransformer.Executed);
@@ -154,7 +154,7 @@ namespace TaskETLTests.Transformers
                 .PipeShift(fourthTransformer)
                 .PipeShift(thirdTransformer);
 
-            newTransformer.transform(new DestinationModel());
+            newTransformer.Transform(new DestinationModel());
 
             Assert.IsTrue(firstTransformer.Executed);
             Assert.IsTrue(secondTransformer.Executed);

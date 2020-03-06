@@ -4,7 +4,7 @@ namespace TaskETL.Processors
 {
     public class JobResult
     {
-        private ICollection<JobException> _errors;
+        private readonly ICollection<JobException> _errors;
         public string ExtractorID { get; set; }
         public string TransformerID { get; set; }
         public string LoaderID { get; set; }

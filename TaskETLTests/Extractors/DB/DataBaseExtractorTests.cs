@@ -1,9 +1,12 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+
 using Moq;
+
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Data.SQLite;
+
 using TaskETL.Extractors.DB;
 
 namespace TaskETLTests.Extractors.DB
@@ -187,7 +190,7 @@ namespace TaskETLTests.Extractors.DB
             Assert.AreEqual(this.ItemA.Code, int.Parse(currentRow[0].ToString()));
             Assert.AreEqual(this.ItemA.Description, currentRow[1]);
             Assert.AreEqual(this.ItemA.Price, decimal.Parse(currentRow[2].ToString()));
-            
+
             Assert.IsTrue(rowsEnumerator.MoveNext());
 
             currentRow = rowsEnumerator.Current;
@@ -203,7 +206,7 @@ namespace TaskETLTests.Extractors.DB
         {
             string sql = "SELECT description FROM items WHERE code = ?;";
             Mock<IQueryDefinition> mock = new Mock<IQueryDefinition>();
-            
+
 
             mock.Setup(_ => _.Connection()).Returns(this.connection);
             mock.Setup(_ => _.Query()).Returns(sql);
@@ -221,7 +224,7 @@ namespace TaskETLTests.Extractors.DB
 
             invocationsEnumerator.MoveNext();
             IInvocation invocation = invocationsEnumerator.Current;
-            
+
             calledMethods.Add(invocation.Method.Name);
 
             invocationsEnumerator.MoveNext();
