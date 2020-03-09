@@ -11,6 +11,7 @@ namespace TaskETL.Extractors.DB
     {
         public IQueryDefinition QueryDefinition { get; private set; }
         public string ID { get; private set; }
+        private IQueryResult DataExtracted;
 
         /// <summary>
         /// 
@@ -26,6 +27,11 @@ namespace TaskETL.Extractors.DB
 
         public IQueryResult Extract()
         {
+            if (this.DataExtracted != null)
+            {
+                return this.DataExtracted;
+            }
+
             ICollection<object[]> rows = new List<object[]>();
             DbConnection connection = this.QueryDefinition.Connection();
             ICollection<string> columns = new List<string>();
@@ -74,7 +80,8 @@ namespace TaskETL.Extractors.DB
                 rows.Add(currentRow);
             }
 
-            return new QueryResult(columns, rows);
+            this.DataExtracted = new QueryResult(columns, rows);
+            return this.DataExtracted;
         }
 
         public string GetID()
