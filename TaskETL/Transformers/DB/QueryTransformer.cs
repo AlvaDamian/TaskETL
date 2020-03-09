@@ -30,7 +30,7 @@ namespace TaskETL.Transformers.DB
 
         public IEnumerable<ObjectType> Transform(IQueryResult source)
         {
-            IEnumerable<ObjectType> ret = new List<ObjectType>();
+            ICollection<ObjectType> ret = new List<ObjectType>();
             IDictionary<int, Action<ObjectType, object>> columnsActions = new Dictionary<int, Action<ObjectType, object>>();
             bool hasOnlyNullActions = true;
 
@@ -72,6 +72,8 @@ namespace TaskETL.Transformers.DB
 
                     currentAction.Invoke(o, item[i]);
                 }
+
+                ret.Add(o);
             }
 
             return ret;
