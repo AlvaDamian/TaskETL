@@ -117,14 +117,9 @@ namespace TaskETL.Processors
             foreach (var item in this.Jobs)
             {
                 Task<JobResult> task = item.Work();
-                task = this.ForEachReport(task);//wrapped task
-                //Task<JobResult> onCompleteTask = ;
-                //task.GetAwaiter().on
-                //task.ContinueWith<JobResult>(this.OnCompleteTask);
-                //this.OnJobCompleteTasks.Add(task.ContinueWith(this.OnCompleteTask));
+                task = this.ForEachReport(task);
+
                 ret.Add(task);
-
-
                 task.Start();
             }
 
