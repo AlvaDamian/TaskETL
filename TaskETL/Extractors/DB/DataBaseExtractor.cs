@@ -9,9 +9,9 @@ namespace TaskETL.Extractors.DB
     /// </summary>
     public class DataBaseExtractor : IExtractor<IQueryResult>
     {
-        public IQueryDefinition QueryDefinition { get; private set; }
-        public string ID { get; private set; }
-        private IQueryResult DataExtracted;
+        private readonly IQueryDefinition QueryDefinition;
+        private readonly string ID;
+        private IQueryResult ExtractedData;
 
         /// <summary>
         /// 
@@ -23,65 +23,99 @@ namespace TaskETL.Extractors.DB
         {
             this.ID = id;
             this.QueryDefinition = queryDefinition;
+            this.ExtractedData = null;
         }
 
         public IQueryResult Extract()
         {
-            if (this.DataExtracted != null)
+            if (this.ExtractedData != null)
             {
-                return this.DataExtracted;
+                return this.ExtractedData;
             }
 
+            bool connectionHasToBeClosed = false;
             ICollection<object[]> rows = new List<object[]>();
-            DbConnection connection = this.QueryDefinition.Connection();
             ICollection<string> columns = new List<string>();
+            DbConnection connection = null;
+            DbCommand command = null;
+            DbDataReader reader = null;
 
-            if (connection.State != ConnectionState.Open)
+            try
             {
-                connection.Open();
-            }
+                connection = this.QueryDefinition.Connection();
 
-
-            DbCommand command = connection.CreateCommand();
-            command.Connection = connection;
-            command.CommandText = this.QueryDefinition.Query();
-
-            foreach (var item in this.QueryDefinition.Parameters())
-            {
-                DbParameter parameter = command.CreateParameter();
-
-                parameter.ParameterName = item.Name;
-                parameter.Value = item.Value;
-                parameter.DbType = item.Type;
-                parameter.Direction = item.Direction;
-
-                if (item.Size.HasValue)
+                if (connection.State != ConnectionState.Open)
                 {
-                    parameter.Size = item.Size.Value;
+                    connectionHasToBeClosed = true;
+                    connection.Open();
                 }
 
-                command.Parameters.Add(parameter);
+                string query = this.QueryDefinition.Query();
+
+                command = connection.CreateCommand();
+                command.Connection = connection;
+                command.CommandText = query;
+
+                foreach (var item in this.QueryDefinition.Parameters())
+                {
+                    DbParameter parameter = command.CreateParameter();
+
+                    parameter.ParameterName = item.Name;
+                    parameter.Value = item.Value;
+                    parameter.DbType = item.Type;
+                    parameter.Direction = item.Direction;
+
+                    if (item.Size.HasValue)
+                    {
+                        parameter.Size = item.Size.Value;
+                    }
+
+                    command.Parameters.Add(parameter);
+                }
+
+                reader = command.ExecuteReader();
+
+                int columnCount = reader.FieldCount;
+
+                for (int i = 0; i < columnCount; i++)
+                {
+                    columns.Add(reader.GetName(i));
+                }
+
+                while (reader.Read())
+                {
+                    object[] currentRow = new object[columnCount];
+
+                    reader.GetValues(currentRow);
+                    rows.Add(currentRow);
+                }
+
+                this.ExtractedData = new QueryResult(columns, rows);
             }
-
-            DbDataReader reader = command.ExecuteReader();
-
-            int columnCount = reader.FieldCount;
-
-            for (int i = 0; i < columnCount; i++)
+            catch (System.Exception)
             {
-                columns.Add(reader.GetName(i));
-            }
+                throw;
 
-            while (reader.Read())
+            } finally
             {
-                object[] currentRow = new object[columnCount];
+                if (reader != null)
+                {
+                    reader.Close();
+                }
 
-                reader.GetValues(currentRow);
-                rows.Add(currentRow);
+                if (command != null)
+                {
+                    command.Dispose();
+                }
+
+                if (connectionHasToBeClosed && connection != null)
+                {
+                    connection.Close();
+                    connection.Dispose();
+                }
             }
-
-            this.DataExtracted = new QueryResult(columns, rows);
-            return this.DataExtracted;
+            
+            return this.ExtractedData;
         }
 
         public string GetID()

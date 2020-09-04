@@ -21,7 +21,7 @@ namespace TaskETLTests.Extractors.DB
             public decimal Price { get; set; }
         };
 
-        private DbConnection connection;
+        private DbConnection Connection;
 
         private Item ItemA;
         private Item ItemB;
@@ -53,11 +53,11 @@ namespace TaskETLTests.Extractors.DB
                         price float NOT NULL
                     );";
             string sqlInsert = "INSERT INTO items(code, description, price) VALUES(@c, @d, @p);";
-            this.connection = new SQLiteConnection("Data Source=:memory:");
+            this.Connection = new SQLiteConnection("Data Source=:memory:");
 
-            this.connection.Open();
+            this.Connection.Open();
 
-            DbCommand command = this.connection.CreateCommand();
+            DbCommand command = this.Connection.CreateCommand();
             DbParameter paramCode = command.CreateParameter();
             DbParameter paramDescription = command.CreateParameter();
             DbParameter paramPrice = command.CreateParameter();
@@ -67,15 +67,15 @@ namespace TaskETLTests.Extractors.DB
             paramPrice.ParameterName = "@p";
 
             //Table creation
-            command = this.connection.CreateCommand();
+            command = this.Connection.CreateCommand();
             command.CommandText = sqlCreateTable;
-            command.Connection = this.connection;
+            command.Connection = this.Connection;
             command.ExecuteNonQuery();
 
             //Data insertion - ItemA
-            command = this.connection.CreateCommand();
+            command = this.Connection.CreateCommand();
             command.CommandText = sqlInsert;
-            command.Connection = this.connection;
+            command.Connection = this.Connection;
 
             paramCode.Value = this.ItemA.Code;
             paramDescription.Value = this.ItemA.Description;
@@ -88,9 +88,9 @@ namespace TaskETLTests.Extractors.DB
             command.ExecuteNonQuery();
 
             //Data insertion - ItemB
-            command = this.connection.CreateCommand();
+            command = this.Connection.CreateCommand();
             command.CommandText = sqlInsert;
-            command.Connection = this.connection;
+            command.Connection = this.Connection;
 
             paramCode.Value = this.ItemB.Code;
             paramDescription.Value = this.ItemB.Description;
@@ -101,12 +101,15 @@ namespace TaskETLTests.Extractors.DB
             command.Parameters.Add(paramPrice);
 
             command.ExecuteNonQuery();
+
+            //Connection should not be closed. Since it is a SQLite memory database,
+            //if we disconnect it, database will be lost.
         }
 
         [TestCleanup]
         public void TestCleanup()
         {
-            this.connection.Dispose();
+            this.Connection.Dispose();
         }
 
         [TestMethod]
@@ -133,7 +136,7 @@ namespace TaskETLTests.Extractors.DB
             string sql = "SELECT code AS code, description AS description, price AS price FROM items;";
             Mock<IQueryDefinition> mock = new Mock<IQueryDefinition>();
 
-            mock.Setup(_ => _.Connection()).Returns(this.connection);
+            mock.Setup(_ => _.Connection()).Returns(this.Connection);
             mock.Setup(_ => _.Query()).Returns(sql);
             mock.Setup(_ => _.Parameters()).Returns(new List<Parameter>());
 
@@ -151,7 +154,7 @@ namespace TaskETLTests.Extractors.DB
             string sql = "SELECT code AS code, description AS description, price AS price FROM items;";
             Mock<IQueryDefinition> mock = new Mock<IQueryDefinition>();
 
-            mock.Setup(_ => _.Connection()).Returns(this.connection);
+            mock.Setup(_ => _.Connection()).Returns(this.Connection);
             mock.Setup(_ => _.Query()).Returns(sql);
             mock.Setup(_ => _.Parameters()).Returns(new List<Parameter>());
 
@@ -175,7 +178,7 @@ namespace TaskETLTests.Extractors.DB
             string sql = "SELECT code AS code, description AS description, price AS price FROM items;";
             Mock<IQueryDefinition> mock = new Mock<IQueryDefinition>();
 
-            mock.Setup(_ => _.Connection()).Returns(this.connection);
+            mock.Setup(_ => _.Connection()).Returns(this.Connection);
             mock.Setup(_ => _.Query()).Returns(sql);
             mock.Setup(_ => _.Parameters()).Returns(new List<Parameter>());
 
@@ -208,7 +211,7 @@ namespace TaskETLTests.Extractors.DB
             Mock<IQueryDefinition> mock = new Mock<IQueryDefinition>();
 
 
-            mock.Setup(_ => _.Connection()).Returns(this.connection);
+            mock.Setup(_ => _.Connection()).Returns(this.Connection);
             mock.Setup(_ => _.Query()).Returns(sql);
             mock.Setup(_ => _.Parameters()).Returns(
                 new List<Parameter>() { Parameter.NewInstance("?", this.ItemA.Code, DbType.Int32) }
@@ -237,5 +240,23 @@ namespace TaskETLTests.Extractors.DB
 
             CollectionAssert.Contains(calledMethods, "Parameters");
         }
+
+        [TestMethod]
+        public void TestUsesAnOpenConnectionAndKeepsItOpen()
+        {
+            string sql = "SELECT description FROM items;";
+
+            Mock<IQueryDefinition> mockQueryDefinition = new Mock<IQueryDefinition>();
+
+            mockQueryDefinition.Setup(_ => _.Connection()).Returns(this.Connection);
+            mockQueryDefinition.Setup(_ => _.Query()).Returns(sql);
+
+            DataBaseExtractor model = new DataBaseExtractor("extractor", mockQueryDefinition.Object);
+            model.Extract();
+
+            Assert.AreEqual(ConnectionState.Open, this.Connection.State);
+        }
+
+
     }
 }
