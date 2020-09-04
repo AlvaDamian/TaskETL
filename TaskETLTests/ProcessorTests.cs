@@ -62,8 +62,12 @@ namespace TaskETLTests.Processors
             IEnumerable<Task> tasks = proccessor.Process();
             Task.WaitAll(new List<Task>(tasks).ToArray());
 
-            Assert.IsTrue(loader.DataReceived.Contains(modelA));
-            Assert.IsFalse(loader.DataReceived.Contains(modelB));
+            IEnumerator<ICollection<SourceModel>> enumerator = loader.DataReceived.GetEnumerator();
+            Assert.IsTrue(enumerator.MoveNext());
+            ICollection<SourceModel> dataReceived = enumerator.Current;
+
+            Assert.IsTrue(dataReceived.Contains(modelA));
+            Assert.IsFalse(dataReceived.Contains(modelB));
 
             extractor = new ExtractorMock<ICollection<SourceModel>>(collectionWithBothModels);
 
@@ -77,9 +81,14 @@ namespace TaskETLTests.Processors
             tasks = proccessor.Process();
             Task.WaitAll(new List<Task>(tasks).ToArray());
 
-            Assert.AreEqual(2, loader.DataReceived.Count);
-            Assert.IsTrue(loader.DataReceived.Contains(modelA));
-            Assert.IsTrue(loader.DataReceived.Contains(modelB));
+            enumerator = loader.DataReceived.GetEnumerator();
+            Assert.IsTrue(enumerator.MoveNext());
+            dataReceived = enumerator.Current;
+
+
+            Assert.AreEqual(2, dataReceived.Count);
+            Assert.IsTrue(dataReceived.Contains(modelA));
+            Assert.IsTrue(dataReceived.Contains(modelB));
         }
 
         [TestMethod]
@@ -445,6 +454,34 @@ namespace TaskETLTests.Processors
 
             invocation = invocationEnumerator.Current;
             Assert.AreEqual("Report", invocation.Method.Name);
+        }
+
+        [TestMethod]
+        public void TestExtractorsWillNotMessWithAnotherExtractorsData()
+        {
+            object dataA = new SourceModel() { StringData = "string" };
+            object dataB = new SourceModel() { DecimalData = 33.52m };
+            object dataC = new SourceModel() { Int32Data = 45, DoubleData = 45.58 };
+
+            IExtractor<object> extractorBefore = new ExtractorMock<object>(dataA);
+            IExtractor<object> extractorLocked = new ExtractorMock<object>(dataB) { WaitMillisecondsToComplete = 3000 };
+            IExtractor<object> extractorAfter = new ExtractorMock<object>(dataC);
+
+            ITransformer<object, object> transformer = new NoActionTransformer<object>("t");
+            LoaderMock<object> loader = new LoaderMock<object>();
+
+            IProcessor processor = new ProcessorBuilder<object>(loader)
+                                    .AddSource("Processor before", extractorBefore, transformer)
+                                    .AddSource("Processor locked", extractorLocked, transformer)
+                                    .AddSource("Processor after", extractorAfter, transformer)
+                                    .Build();
+
+            List<Task<JobResult>> tasks = new List<Task<JobResult>>(processor.Process());
+            Task.WaitAll(tasks.ToArray());
+
+            CollectionAssert.Contains(loader.DataReceived, dataA);
+            CollectionAssert.Contains(loader.DataReceived, dataB);
+            CollectionAssert.Contains(loader.DataReceived, dataC);
         }
     }
 }

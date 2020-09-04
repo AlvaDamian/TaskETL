@@ -22,6 +22,8 @@ namespace TaskETL.Processors
     /// <typeparam name="DestinationType">Destination data type.</typeparam>
     internal class Job<SourceType, DestinationType>
     {
+
+
         private readonly IExtractor<SourceType> Extractor;
         private readonly ITransformer<SourceType, DestinationType> Transformer;
         //private readonly IEnumerable<ILoader<DestinationType>> Loaders;
@@ -32,23 +34,11 @@ namespace TaskETL.Processors
             ITransformer<SourceType, DestinationType> transformer,
             ILoader<DestinationType> loader
             )
-        //: this(extractor, transformer, new List<ILoader<DestinationType>>() { loader })
         {
             this.Extractor = extractor;
             this.Transformer = transformer;
             this.loader = loader;
         }
-
-        //public Job(
-        //    IExtractor<SourceType> extractor,
-        //    ITransformer<SourceType, DestinationType> transformer,
-        //    ICollection<ILoader<DestinationType>> loaders
-        //)
-        //{
-        //    this.Extractor = extractor;
-        //    this.Transformer = transformer;
-        //    this.Loaders = new ConcurrentBag<ILoader<DestinationType>>(loaders);
-        //}
 
         /// <summary>
         /// <para>
@@ -111,39 +101,6 @@ namespace TaskETL.Processors
                         );
                     }
                 }
-
-
-                //BlockingCollection<JobException> loadingErrors = new BlockingCollection<JobException>();
-                //BlockingCollection<Task> loadersTasks = new BlockingCollection<Task>();
-                //
-                //foreach (var item in this.Loaders)
-                //{
-                //    ILoader<DestinationType> currentLoader = item;
-                //
-                //    loadersTasks.Add(Task.Run(() =>
-                //    {
-                //        lock (currentLoader)
-                //        {
-                //            try
-                //            {
-                //                currentLoader.Load(destinationData);
-                //            }
-                //            catch (Exception)
-                //            {
-                //                loadingErrors.Add(
-                //                    new JobException(
-                //                        $"Unhandled exceptión proccessing loader '{item.GetID()}'.",
-                //                        item.GetID(),
-                //                        Phase.LOAGING
-                //                    )
-                //                );
-                //            }
-                //        }
-                //    }));
-                //}
-                //
-                //Task.WaitAll(new List<Task>(loadersTasks).ToArray());
-                //return JobResult.Build(loadingErrors);
 
                 lock (this.loader)
                 {
