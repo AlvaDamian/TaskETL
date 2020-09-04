@@ -1,5 +1,5 @@
 ﻿using System;
-
+using System.Collections.Generic;
 using TaskETL.Loaders;
 
 namespace TaskETLTests.Mock
@@ -10,7 +10,7 @@ namespace TaskETLTests.Mock
         public static string DEFAULT_ID = "LoaderMock";
         private readonly string ID;
 
-        public DestinationType DataReceived { get; private set; }
+        public List<DestinationType> DataReceived { get; private set; }
         public bool Executed { get; private set; }
         public bool Disposed { get; private set; }
 
@@ -23,12 +23,13 @@ namespace TaskETLTests.Mock
             this.Executed = false;
             this.Disposed = false;
             this.ID = id;
+            this.DataReceived = new List<DestinationType>();
         }
 
         public void Load(DestinationType data)
         {
             this.Executed = true;
-            this.DataReceived = data;
+            this.DataReceived.Add(data);
         }
 
         public string GetID()
