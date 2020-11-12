@@ -4,6 +4,6 @@
     {
         EXTRACTION,
         TRANSFORMATION,
-        LOAGING
+        LOADING
     }
 }
