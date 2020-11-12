@@ -117,7 +117,7 @@ namespace TaskETL.Processors
                             new JobException(
                                 $"Unhandled exception processing loader '{this.loader.GetID()}'.",
                                 this.loader.GetID(),
-                                Phase.LOAGING,
+                                Phase.LOADING,
                                 eLoading
                                 )
                             );

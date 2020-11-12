@@ -61,7 +61,9 @@ namespace TaskETL.Processors
             {
                 item.SetReports(this.Reports);
 
-                foreach (var task in item.Process())
+                IEnumerable<Task<JobResult>> tasks = item.Process();
+
+                foreach (var task in tasks)
                 {
                     ret.Add(task);
                 };
