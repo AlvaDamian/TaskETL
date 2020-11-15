@@ -2,7 +2,7 @@
 
 namespace TaskETLTests.Mock
 {
-    internal class DestinationModel
+    public class DestinationModel
     {
         private readonly ICollection<string> _strings;
 

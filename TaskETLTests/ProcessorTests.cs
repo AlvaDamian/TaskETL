@@ -4,6 +4,7 @@ using Moq;
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 using TaskETL;
@@ -19,14 +20,22 @@ namespace TaskETLTests.Processors
     [TestClass]
     public class ProcessorTests
     {
+        public interface IDisposableExtractor<T> : IExtractor<T>, IDisposable { }
+        public interface IDisposableTransformer<T, Y> : ITransformer<T, Y>, IDisposable { }
+        public interface IDisposableLoader<T> : ILoader<T>, IDisposable { }
+
         [TestMethod]
         public void TestInitializesWithoutErrors()
         {
+            Mock<IExtractor<object>> extractorMock = new Mock<IExtractor<object>>();
+            Mock<ITransformer<object, object>> transformerMock = new Mock<ITransformer<object, object>>();
+            Mock<ILoader<object>> loaderMock = new Mock<ILoader<object>>();
+
             new Processor<object, object>(
-                "Proccessor",
-                new ExtractorMock<object>(),
-                new TransformerMock<object, object>(new object()),
-                new LoaderMock<object>()
+                "Processor",
+                extractorMock.Object,
+                transformerMock.Object,
+                loaderMock.Object
                 );
         }
 
@@ -50,62 +59,53 @@ namespace TaskETLTests.Processors
             ICollection<SourceModel> collectionWithModelA = new List<SourceModel>() { modelA };
             ICollection<SourceModel> collectionWithBothModels = new List<SourceModel>() { modelA, modelB };
 
-            IExtractor<ICollection<SourceModel>> extractor = new ExtractorMock<ICollection<SourceModel>>(collectionWithModelA);
-            LoaderMock<ICollection<SourceModel>> loader = new LoaderMock<ICollection<SourceModel>>();
-            IProcessor proccessor = new Processor<ICollection<SourceModel>, ICollection<SourceModel>>(
-                "ModelAProccessor",
-                extractor,
+            Mock<IExtractor<ICollection<SourceModel>>> extractorMock = new Mock<IExtractor<ICollection<SourceModel>>>();
+            Mock<ILoader<ICollection<SourceModel>>> loaderMock = new Mock<ILoader<ICollection<SourceModel>>>();
+
+            extractorMock.Setup(_ => _.Extract()).Returns(collectionWithModelA);
+
+            IProcessor processor = new Processor<ICollection<SourceModel>, ICollection<SourceModel>>(
+                "ModelAProcessor",
+                extractorMock.Object,
                 new NoActionTransformer<ICollection<SourceModel>>("SameTypeTransformer"),
-                loader
+                loaderMock.Object
                 );
 
-            IEnumerable<Task> tasks = proccessor.Process();
+            
+
+            IEnumerable<Task> tasks = processor.Process();
             Task.WaitAll(new List<Task>(tasks).ToArray());
 
-            IEnumerator<ICollection<SourceModel>> enumerator = loader.DataReceived.GetEnumerator();
-            Assert.IsTrue(enumerator.MoveNext());
-            ICollection<SourceModel> dataReceived = enumerator.Current;
+            loaderMock.Verify(_ => _.Load(collectionWithModelA), Times.Once);
 
-            Assert.IsTrue(dataReceived.Contains(modelA));
-            Assert.IsFalse(dataReceived.Contains(modelB));
+            extractorMock.Setup(_ => _.Extract()).Returns(collectionWithBothModels);
 
-            extractor = new ExtractorMock<ICollection<SourceModel>>(collectionWithBothModels);
-
-            loader = new LoaderMock<ICollection<SourceModel>>();
-            proccessor = new Processor<ICollection<SourceModel>, ICollection<SourceModel>>(
-                "ModelAAndBProccessor",
-                extractor, new NoActionTransformer<ICollection<SourceModel>>("SameTypeTransformer"),
-                loader
-            );
-
-            tasks = proccessor.Process();
+            tasks = processor.Process();
             Task.WaitAll(new List<Task>(tasks).ToArray());
 
-            enumerator = loader.DataReceived.GetEnumerator();
-            Assert.IsTrue(enumerator.MoveNext());
-            dataReceived = enumerator.Current;
-
-
-            Assert.AreEqual(2, dataReceived.Count);
-            Assert.IsTrue(dataReceived.Contains(modelA));
-            Assert.IsTrue(dataReceived.Contains(modelB));
+            loaderMock.Verify(_ => _.Load(collectionWithBothModels), Times.Once);
         }
 
         [TestMethod]
         public void TestResultHasErrorWhenExtractorFails()
         {
+            object data = new object();
             string errorMessage = "Expected exception.";
             string extractorID = "extractor_175";
             Exception exceptionToThrow = new Exception(errorMessage);
-            IExtractor<object> extractor = new ExtractorWithErrorMock<object>(extractorID, exceptionToThrow);
-            ILoader<object> loader = new LoaderMock<object>();
 
-            ProcessorBuilder<object> builder = new ProcessorBuilder<object>(loader);
+            Mock<IExtractor<object>> extractorMock = new Mock<IExtractor<object>>();
+            Mock<ILoader<object>> loaderMock = new Mock<ILoader<object>>();
 
-            IProcessor faillingProccessor =
-                builder.AddSource("FailingProccessor", extractor).Build();
+            extractorMock.Setup(_ => _.Extract()).Throws(exceptionToThrow);
+            extractorMock.Setup(_ => _.GetID()).Returns(extractorID);
 
-            IEnumerable<Task<JobResult>> tasks = faillingProccessor.Process();
+            ProcessorBuilder<object> builder = new ProcessorBuilder<object>(loaderMock.Object);
+
+            IProcessor faillingProcessor =
+                builder.AddSource("FailingProcessor", extractorMock.Object).Build();
+
+            IEnumerable<Task<JobResult>> tasks = faillingProcessor.Process();
             Task.WaitAll(new List<Task>(tasks).ToArray());
 
             IEnumerator<Task<JobResult>> enumerator = tasks.GetEnumerator();
@@ -133,19 +133,25 @@ namespace TaskETLTests.Processors
         [TestMethod]
         public void TestResultHasErrorWhenTransformerFails()
         {
+            object data = new object();
             string errorMessage = "TransformationError";
             string transformerID = "transformer_ 99 9 9 99 ";
             Exception exceptionToThrow = new Exception(errorMessage);
-            IExtractor<object> extractor = new ExtractorMock<object>();
-            ITransformer<object, object> tranformer = new TransformerWithErrorMock<object, object>(transformerID, exceptionToThrow);
-            ILoader<object> loader = new LoaderMock<object>();
 
-            IProcessor proccessor =
-                new ProcessorBuilder<object>(loader)
-                .AddSource("ProccessorWithTransformationError", extractor, tranformer)
+            Mock<IExtractor<object>> extractorMock = new Mock<IExtractor<object>>();
+            Mock<ITransformer<object, object>> transformerMock = new Mock<ITransformer<object, object>>();
+            Mock<ILoader<object>> loaderMock = new Mock<ILoader<object>>();
+
+            extractorMock.Setup(_ => _.Extract()).Returns(data);
+            transformerMock.Setup(_ => _.GetID()).Returns(transformerID);
+            transformerMock.Setup(_ => _.Transform(data)).Throws(exceptionToThrow);
+
+            IProcessor processor =
+                new ProcessorBuilder<object>(loaderMock.Object)
+                .AddSource("ProcessorWithTransformationError", extractorMock.Object, transformerMock.Object)
                 .Build();
 
-            IEnumerable<Task<JobResult>> tasks = proccessor.Process();
+            IEnumerable<Task<JobResult>> tasks = processor.Process();
             Task.WaitAll(new List<Task>(tasks).ToArray());
 
             IEnumerator<Task<JobResult>> enumerator = tasks.GetEnumerator();
@@ -176,17 +182,25 @@ namespace TaskETLTests.Processors
         {
             string errorMessage = "LoadingException";
             string loaderID = "1111...55555";
+            object data = new object();
             Exception exceptionToThrow = new Exception(errorMessage);
-            IExtractor<object> extractor = new ExtractorMock<object>();
-            ITransformer<object, object> transformer = new TransformerMock<object, object>(new object());
-            ILoader<object> loader = new LoaderWithErrorMock<object>(loaderID, exceptionToThrow);
 
-            IProcessor proccessor =
-                new ProcessorBuilder<object>(loader)
-                .AddSource("ProccessWithLoadingError", extractor, transformer)
+            Mock<IExtractor<object>> extractorMock = new Mock<IExtractor<object>>();
+            Mock<ITransformer<object, object>> transformerMock = new Mock<ITransformer<object, object>>();
+            Mock<ILoader<object>> loaderMock = new Mock<ILoader<object>>();
+
+            extractorMock.Setup(_ => _.Extract()).Returns(data);
+            transformerMock.Setup(_ => _.Transform(data)).Returns(data);
+
+            loaderMock.Setup(_ => _.GetID()).Returns(loaderID);
+            loaderMock.Setup(_ => _.Load(data)).Throws(exceptionToThrow);
+
+            IProcessor processor =
+                new ProcessorBuilder<object>(loaderMock.Object)
+                .AddSource("ProcessWithLoadingError", extractorMock.Object, transformerMock.Object)
                 .Build();
 
-            IEnumerable<Task<JobResult>> tasks = proccessor.Process();
+            IEnumerable<Task<JobResult>> tasks = processor.Process();
             Task.WaitAll(new List<Task>(tasks).ToArray());
 
             IEnumerator<Task<JobResult>> enumerator = tasks.GetEnumerator();
@@ -205,7 +219,7 @@ namespace TaskETLTests.Processors
             Assert.IsTrue(errorsEnumerator.MoveNext());
 
             JobException jobException = errorsEnumerator.Current;
-            Assert.AreEqual(Phase.LOAGING, jobException.JobPhase);
+            Assert.AreEqual(Phase.LOADING, jobException.JobPhase);
             Assert.AreEqual(loaderID, jobException.FaillingComponentID);
 
             Assert.IsFalse(errorsEnumerator.MoveNext());
@@ -215,104 +229,128 @@ namespace TaskETLTests.Processors
         [TestMethod]
         public void TestWillNotReachTransformerIfThereIsAnExtractionError()
         {
-            IExtractor<object> extractor = new ExtractorWithErrorMock<object>(new Exception("ExtractorError"));
-            TransformerMock<object, object> transformer = new TransformerMock<object, object>(new object());
-            ILoader<object> loader = new LoaderMock<object>();
+            Exception expectedException = new Exception("ExtractorError");
+            Mock<IExtractor<object>> extractorMock = new Mock<IExtractor<object>>();
+            Mock<ITransformer<object, object>> transfomerMock = new Mock<ITransformer<object, object>>();
+            Mock<ILoader<object>> loaderMock = new Mock<ILoader<object>>();
 
-            IProcessor proccessor =
-                new ProcessorBuilder<object>(loader)
-                .AddSource("Proccessor", extractor, transformer)
+            IProcessor processor =
+                new ProcessorBuilder<object>(loaderMock.Object)
+                .AddSource("Processor", extractorMock.Object, transfomerMock.Object)
                 .Build();
 
-            IEnumerable<Task<JobResult>> tasks = proccessor.Process();
+            IEnumerable<Task<JobResult>> tasks = processor.Process();
             Task.WaitAll(new List<Task>(tasks).ToArray());
 
-            Assert.IsFalse(transformer.Executed);
+            transfomerMock.Verify(_ => _.Transform(new object()), Times.Never);
         }
 
         [TestMethod]
         public void TestWilNotReachLoaderIfThereIsTranformationError()
         {
-            IExtractor<object> extractor = new ExtractorMock<object>();
-            ITransformer<object, object> transformer = new TransformerWithErrorMock<object, object>(new Exception("error"));
-            LoaderMock<object> loader = new LoaderMock<object>();
+            object data = new object();
+            Mock<IExtractor<object>> extractorMock = new Mock<IExtractor<object>>();
+            Mock<ITransformer<object, object>> transformerMock = new Mock<ITransformer<object, object>>();
+            Mock<ILoader<object>> loader = new Mock<ILoader<object>>();
 
-            IProcessor proccessor =
-                new ProcessorBuilder<object>(loader)
-                .AddSource("proccessor", extractor, transformer)
+            extractorMock.Setup(_ => _.Extract()).Returns(data);
+            transformerMock.Setup(_ => _.Transform(data)).Throws(new Exception());
+
+            IProcessor processor =
+                new ProcessorBuilder<object>(loader.Object)
+                .AddSource("processor", extractorMock.Object, transformerMock.Object)
                 .Build();
 
-            IEnumerable<Task<JobResult>> tasks = proccessor.Process();
+            IEnumerable<Task<JobResult>> tasks = processor.Process();
             Task.WaitAll(new List<Task>(tasks).ToArray());
 
-            Assert.IsFalse(loader.Executed);
+            loader.Verify(_ => _.Load(data), Times.Never, "ILoader.Load should not be called");
         }
 
         [TestMethod]
         public void TestDisposesETLComponents()
         {
-            ExtractorMock<object> extractor = new ExtractorMock<object>(new object());
-            TransformerMock<object, object> transformer = new TransformerMock<object, object>(new object());
-            LoaderMock<object> loader = new LoaderMock<object>();
+            Mock<IDisposableExtractor<object>> extractorMock = new Mock<IDisposableExtractor<object>>();
+            Mock<IDisposableTransformer<object, object>> transformerMock = new Mock<IDisposableTransformer<object, object>>();
+            Mock<IDisposableLoader<object>> loaderMock = new Mock<IDisposableLoader<object>>();
+
+            extractorMock.Setup(_ => _.Extract()).Returns(new object());
+            extractorMock.Setup(_ => _.Dispose()).Verifiable();
+
+            transformerMock.Setup(_ => _.Transform(It.IsAny<object>())).Returns(new object());
+            transformerMock.Setup(_ => _.Dispose()).Verifiable();
+
+            loaderMock.Setup(_ => _.Dispose()).Verifiable();
 
             IProcessor processor =
-                new ProcessorBuilder<object>(loader)
-                .AddSource("process", extractor, transformer)
+                new ProcessorBuilder<object>(loaderMock.Object)
+                .AddSource("process", extractorMock.Object, transformerMock.Object)
                 .Build();
 
             processor.Dispose();
 
-            Assert.IsTrue(extractor.Disposed);
-            Assert.IsTrue(transformer.Disposed);
-            Assert.IsTrue(loader.Disposed);
+            extractorMock.Verify(_ => _.Dispose(), Times.Once);
+            transformerMock.Verify(_ => _.Dispose(), Times.Once);
+            loaderMock.Verify(_ => _.Dispose(), Times.Once);
         }
 
         [TestMethod]
         public void TestWillNoExecuteAnyJobIfNoExtractorIsSpecified()
         {
-            LoaderMock<object> loader = new LoaderMock<object>();
-            IProcessor processor = new ProcessorBuilder<object>(loader).Build();
+            object data = new object();
+            Mock<ILoader<object>> loaderMock = new Mock<ILoader<object>>();
+            IProcessor processor = new ProcessorBuilder<object>(loaderMock.Object).Build();
 
             IEnumerable<Task> tasks = processor.Process();
             Task.WaitAll(new List<Task>(tasks).ToArray());
 
-            Assert.IsFalse(loader.Executed);
+            loaderMock.Verify(_ => _.Load(data), Times.Never);
         }
 
         [TestMethod]
         public void TestWillNoExecuteAnyJobIfNoLoaderIsSpecified()
         {
-            ExtractorMock<object> extractor = new ExtractorMock<object>(new object());
-            TransformerMock<object, object> transformer = new TransformerMock<object, object>(new object());
+            object data = new object();
+            Mock<IExtractor<object>> extractorMock = new Mock<IExtractor<object>>();
+            Mock<ITransformer<object, object>> transformerMock = new Mock<ITransformer<object, object>>();
+
             ICollection<ILoader<object>> loaders = new List<ILoader<object>>();
+
+            extractorMock.Setup(_ => _.Extract()).Returns(data);
+            transformerMock.Setup(_ => _.Transform(data)).Returns(data);
 
             IProcessor processor =
                 new ProcessorBuilder<object>(loaders)
-                .AddSource("process", extractor, transformer)
+                .AddSource("process", extractorMock.Object, transformerMock.Object)
                 .Build();
 
             IEnumerable<Task> tasks = processor.Process();
             Task.WaitAll(new List<Task>(tasks).ToArray());
 
-            Assert.IsFalse(extractor.Executed);
-            Assert.IsFalse(transformer.Executed);
+            extractorMock.Verify(_ => _.Extract(), Times.Never);
+            transformerMock.Verify(_ => _.Transform(data), Times.Never);
         }
 
         [TestMethod]
         public void TestWillDispoeEvenIfLoaderIsNotSpecified()
         {
-            ExtractorMock<object> extractor = new ExtractorMock<object>(new object());
-            TransformerMock<object, object> transformer = new TransformerMock<object, object>(new object());
+            Mock<IDisposableExtractor<object>> extractorMock = new Mock<IDisposableExtractor<object>>();
+            Mock<IDisposableTransformer<object, object>> transformerMock = new Mock<IDisposableTransformer<object, object>>();
+
+            extractorMock.Setup(_ => _.Extract()).Returns(new object());
+            transformerMock.Setup(_ => _.Transform(It.IsAny<object>())).Returns(new object());
+
             ICollection<ILoader<object>> loaders = new List<ILoader<object>>();
 
             IProcessor processor =
                 new ProcessorBuilder<object>(loaders)
-                .AddSource("process", extractor, transformer)
+                .AddSource("process", extractorMock.Object, transformerMock.Object)
                 .Build();
 
             processor.Dispose();
-            Assert.IsTrue(extractor.Disposed);
-            Assert.IsTrue(transformer.Disposed);
+
+            extractorMock.Verify(_ => _.Dispose(), Times.Once);
+            transformerMock.Verify(_ => _.Dispose(), Times.Once);
         }
 
         [TestMethod]
@@ -463,25 +501,29 @@ namespace TaskETLTests.Processors
             object dataB = new SourceModel() { DecimalData = 33.52m };
             object dataC = new SourceModel() { Int32Data = 45, DoubleData = 45.58 };
 
-            IExtractor<object> extractorBefore = new ExtractorMock<object>(dataA);
-            IExtractor<object> extractorLocked = new ExtractorMock<object>(dataB) { WaitMillisecondsToComplete = 3000 };
-            IExtractor<object> extractorAfter = new ExtractorMock<object>(dataC);
+            Mock<IExtractor<object>> extractorBeforeMock = new Mock<IExtractor<object>>();
+            Mock<IExtractor<object>> extractorLockedMock = new Mock<IExtractor<object>>();
+            Mock<IExtractor<object>> extractorAfterMock = new Mock<IExtractor<object>>();
 
-            ITransformer<object, object> transformer = new NoActionTransformer<object>("t");
-            LoaderMock<object> loader = new LoaderMock<object>();
+            Mock<ILoader<object>> loaderMock = new Mock<ILoader<object>>();
 
-            IProcessor processor = new ProcessorBuilder<object>(loader)
-                                    .AddSource("Processor before", extractorBefore, transformer)
-                                    .AddSource("Processor locked", extractorLocked, transformer)
-                                    .AddSource("Processor after", extractorAfter, transformer)
+
+            extractorBeforeMock.Setup(_ => _.Extract()).Callback(() => Thread.Sleep(3000)).Returns(dataA);
+            extractorLockedMock.Setup(_ => _.Extract()).Returns(dataB);
+            extractorAfterMock.Setup(_ => _.Extract()).Returns(dataC);
+
+            IProcessor processor = new ProcessorBuilder<object>(loaderMock.Object)
+                                    .AddSource("Processor before", extractorBeforeMock.Object)
+                                    .AddSource("Processor locked", extractorLockedMock.Object)
+                                    .AddSource("Processor after", extractorAfterMock.Object)
                                     .Build();
 
             List<Task<JobResult>> tasks = new List<Task<JobResult>>(processor.Process());
             Task.WaitAll(tasks.ToArray());
 
-            CollectionAssert.Contains(loader.DataReceived, dataA);
-            CollectionAssert.Contains(loader.DataReceived, dataB);
-            CollectionAssert.Contains(loader.DataReceived, dataC);
+            loaderMock.Verify(_ => _.Load(dataA), Times.Once);
+            loaderMock.Verify(_ => _.Load(dataB), Times.Once);
+            loaderMock.Verify(_ => _.Load(dataC), Times.Once);
         }
     }
 }

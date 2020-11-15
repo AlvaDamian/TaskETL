@@ -1,6 +1,6 @@
 ﻿namespace TaskETLTests.Mock
 {
-    internal class IntermediateModel
+    public class IntermediateModel
     {
     }
 }

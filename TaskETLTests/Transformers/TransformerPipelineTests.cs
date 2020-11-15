@@ -1,16 +1,18 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
-using System.Collections.Generic;
+using System;
 
 using TaskETL.Transformers;
-
 using TaskETLTests.Mock;
 
 namespace TaskETLTests.Transformers
 {
-    [Microsoft.VisualStudio.TestTools.UnitTesting.TestClass]
+    [TestClass]
     public class TransformerPipelineTests
     {
+        public interface IDisposableTransformer<T, Y> : ITransformer<T, Y>, IDisposable { }
+
         [TestMethod]
         public void TestInitializesWithoutErrors()
         {
@@ -24,210 +26,194 @@ namespace TaskETLTests.Transformers
         [TestMethod]
         public void TestReturnsDataFromLastTransformer()
         {
-            string initialString = "expected string %43434 ds";
-            DestinationModel expectedData = new DestinationModel(initialString);
+            Mock<ITransformer<SourceModel, IntermediateModel>> leftTransformerMock = new Mock<ITransformer<SourceModel, IntermediateModel>>();
+            Mock<ITransformer<IntermediateModel, DestinationModel>> rightTransformerMock = new Mock<ITransformer<IntermediateModel, DestinationModel>>();
 
-            ITransformer<SourceModel, IntermediateModel> leftTransformer =
-                new TransformerMock<SourceModel, IntermediateModel>(new IntermediateModel());
+            SourceModel sourceData = new SourceModel();
+            IntermediateModel intermediateData = new IntermediateModel();
+            DestinationModel destinationData = new DestinationModel();
 
-            ITransformer<IntermediateModel, DestinationModel> rightTransformer =
-                new TransformerMock<IntermediateModel, DestinationModel>(expectedData);
+            leftTransformerMock.Setup(_ => _.Transform(sourceData)).Returns(intermediateData);
+            rightTransformerMock.Setup(_ => _.Transform(intermediateData)).Returns(destinationData);
 
             ITransformer<SourceModel, DestinationModel> tranformer =
                 new TransformerPipeline<SourceModel, IntermediateModel, DestinationModel>(
-                    leftTransformer,
-                    rightTransformer
+                    leftTransformerMock.Object,
+                    rightTransformerMock.Object
                     );
 
-            SourceModel sourceData = new SourceModel();
+            
             DestinationModel resultData = tranformer.Transform(sourceData);
 
-
-            Assert.IsNotNull(resultData);
-
-            IEnumerator<string> enumerator = resultData.StringEnumerable.GetEnumerator();
-
-            Assert.IsTrue(enumerator.MoveNext());
-            Assert.AreEqual(initialString, enumerator.Current);
-            Assert.IsFalse(enumerator.MoveNext());
+            Assert.AreEqual(destinationData, resultData);
         }
 
         [TestMethod]
-        public void TestCallAllTransformer()
+        public void TestCallsAllTransformers()
         {
-            TransformerMock<SourceModel, IntermediateModel> leftTransformer =
-                new TransformerMock<SourceModel, IntermediateModel>(new IntermediateModel());
+            SourceModel source = new SourceModel();
+            IntermediateModel intermediate = new IntermediateModel();
+            Mock<ITransformer<SourceModel, IntermediateModel>> leftTransformerMock = new Mock<ITransformer<SourceModel, IntermediateModel>>();
+            Mock<ITransformer<IntermediateModel, DestinationModel>> rightTransformerMock = new Mock<ITransformer<IntermediateModel, DestinationModel>>();
 
-            TransformerMock<IntermediateModel, DestinationModel> rightTransformer =
-                new TransformerMock<IntermediateModel, DestinationModel>(new DestinationModel());
+            leftTransformerMock.Setup(_ => _.Transform(source)).Returns(intermediate).Verifiable();
+            rightTransformerMock.Setup(_ => _.Transform(intermediate)).Returns(new DestinationModel()).Verifiable();
 
             ITransformer<SourceModel, DestinationModel> tranformer =
                 new TransformerPipeline<SourceModel, IntermediateModel, DestinationModel>(
-                    leftTransformer,
-                    rightTransformer
+                    leftTransformerMock.Object,
+                    rightTransformerMock.Object
                     );
 
-            tranformer.Transform(new SourceModel());
+            tranformer.Transform(source);
 
-            Assert.IsTrue(leftTransformer.Executed);
-            Assert.IsTrue(rightTransformer.Executed);
+            leftTransformerMock.Verify(_ => _.Transform(source), Times.Once);
+            rightTransformerMock.Verify(_ => _.Transform(intermediate), Times.Once);
         }
 
         [TestMethod]
         public void TestDisposeDependantsTransformers()
         {
-            TransformerMock<SourceModel, IntermediateModel> leftTransformer =
-                new TransformerMock<SourceModel, IntermediateModel>(new IntermediateModel());
-
-            TransformerMock<IntermediateModel, DestinationModel> rightTransformer =
-                new TransformerMock<IntermediateModel, DestinationModel>(new DestinationModel());
-
+            Mock<IDisposableTransformer<SourceModel, IntermediateModel>> leftTransformerMock = new Mock<IDisposableTransformer<SourceModel, IntermediateModel>>();
+            Mock<IDisposableTransformer<IntermediateModel, DestinationModel>> rightTransformerMock = new Mock<IDisposableTransformer<IntermediateModel, DestinationModel>>();
+            
             TransformerPipeline<SourceModel, IntermediateModel, DestinationModel> tranformer =
                 new TransformerPipeline<SourceModel, IntermediateModel, DestinationModel>(
-                    leftTransformer,
-                    rightTransformer
+                    leftTransformerMock.Object,
+                    rightTransformerMock.Object
                     );
 
             tranformer.Dispose();
 
-            Assert.IsTrue(leftTransformer.Disposed);
-            Assert.IsTrue(rightTransformer.Disposed);
+            leftTransformerMock.Verify(_ => _.Dispose(), Times.Once);
+            rightTransformerMock.Verify(_ => _.Dispose(), Times.Once);
         }
 
         [TestMethod]
         public void TestCallsIntermediateTransformersWhenPushing()
         {
-            TransformerMock<SourceModel, IntermediateModel> firstTransformer =
-                new TransformerMock<SourceModel, IntermediateModel>(new IntermediateModel());
+            SourceModel sourceModel = new SourceModel();
+            IntermediateModel intermediateModel = new IntermediateModel();
+            DestinationModel destinationModel = new DestinationModel();
 
-            TransformerMock<IntermediateModel, DestinationModel> secondTransformer =
-                new TransformerMock<IntermediateModel, DestinationModel>(new DestinationModel());
+            Mock<ITransformer<SourceModel, IntermediateModel>> firstTransformerMock = new Mock<ITransformer<SourceModel, IntermediateModel>>();
+            Mock<ITransformer<IntermediateModel, DestinationModel>> secondTransformerMock = new Mock<ITransformer<IntermediateModel, DestinationModel>>();
+            Mock<ITransformer<DestinationModel, IntermediateModel>> thirdTransformerMock = new Mock<ITransformer<DestinationModel, IntermediateModel>>();
+            Mock<ITransformer<IntermediateModel, SourceModel>> fourthTransformerMock = new Mock<ITransformer<IntermediateModel, SourceModel>>();
 
-            TransformerMock<DestinationModel, IntermediateModel> thirdTransformer =
-                new TransformerMock<DestinationModel, IntermediateModel>(new IntermediateModel());
-
-            TransformerMock<IntermediateModel, SourceModel> fourthTransformer =
-                new TransformerMock<IntermediateModel, SourceModel>(new SourceModel());
+            firstTransformerMock.Setup(_ => _.Transform(sourceModel)).Returns(intermediateModel).Verifiable();
+            secondTransformerMock.Setup(_ => _.Transform(intermediateModel)).Returns(destinationModel).Verifiable();
+            thirdTransformerMock.Setup(_ => _.Transform(destinationModel)).Returns(intermediateModel).Verifiable();
+            fourthTransformerMock.Setup(_ => _.Transform(intermediateModel)).Returns(sourceModel).Verifiable();
 
             TransformerPipeline<SourceModel, IntermediateModel, DestinationModel> transformer =
                 new TransformerPipeline<SourceModel, IntermediateModel, DestinationModel>(
-                    firstTransformer,
-                    secondTransformer
+                    firstTransformerMock.Object,
+                    secondTransformerMock.Object
                     );
 
             ITransformer<SourceModel, SourceModel> newTransformer =
                 transformer
-                .PipePush(thirdTransformer)
-                .PipePush(fourthTransformer);
+                .PipePush(thirdTransformerMock.Object)
+                .PipePush(fourthTransformerMock.Object);
 
-            newTransformer.Transform(new SourceModel());
+            newTransformer.Transform(sourceModel);
 
-            Assert.IsTrue(firstTransformer.Executed);
-            Assert.IsTrue(secondTransformer.Executed);
-            Assert.IsTrue(thirdTransformer.Executed);
-            Assert.IsTrue(fourthTransformer.Executed);
+            firstTransformerMock.Verify(_ => _.Transform(sourceModel), Times.Once);
+            secondTransformerMock.Verify(_ => _.Transform(intermediateModel), Times.Once);
+            thirdTransformerMock.Verify(_ => _.Transform(destinationModel), Times.Once);
+            fourthTransformerMock.Verify(_ => _.Transform(intermediateModel), Times.Once);
         }
 
         [TestMethod]
         public void TestCallsIntermediateTransformerWhenShifting()
         {
-            TransformerMock<SourceModel, IntermediateModel> firstTransformer =
-                new TransformerMock<SourceModel, IntermediateModel>(new IntermediateModel());
+            SourceModel sourceModel = new SourceModel();
+            IntermediateModel intermediateModel = new IntermediateModel();
+            DestinationModel destinationModel = new DestinationModel();
 
-            TransformerMock<IntermediateModel, DestinationModel> secondTransformer =
-                new TransformerMock<IntermediateModel, DestinationModel>(new DestinationModel());
+            Mock<ITransformer<SourceModel, IntermediateModel>> firstTransformerMock = new Mock<ITransformer<SourceModel, IntermediateModel>>();
+            Mock<ITransformer<IntermediateModel, DestinationModel>> secondTransformerMock = new Mock<ITransformer<IntermediateModel, DestinationModel>>();
+            Mock<ITransformer<DestinationModel, IntermediateModel>> thirdTransformerMock = new Mock<ITransformer<DestinationModel, IntermediateModel>>();
+            Mock<ITransformer<IntermediateModel, SourceModel>> fourthTransformerMock = new Mock<ITransformer<IntermediateModel, SourceModel>>();
 
-            TransformerMock<DestinationModel, IntermediateModel> thirdTransformer =
-                new TransformerMock<DestinationModel, IntermediateModel>(new IntermediateModel());
+            firstTransformerMock.Setup(_ => _.Transform(sourceModel)).Returns(intermediateModel).Verifiable();
+            secondTransformerMock.Setup(_ => _.Transform(intermediateModel)).Returns(destinationModel).Verifiable();
+            thirdTransformerMock.Setup(_ => _.Transform(destinationModel)).Returns(intermediateModel).Verifiable();
+            fourthTransformerMock.Setup(_ => _.Transform(intermediateModel)).Returns(sourceModel).Verifiable();
 
-            TransformerMock<IntermediateModel, SourceModel> fourthTransformer =
-                new TransformerMock<IntermediateModel, SourceModel>(new SourceModel());
 
             TransformerPipeline<SourceModel, IntermediateModel, DestinationModel> transformer =
                 new TransformerPipeline<SourceModel, IntermediateModel, DestinationModel>(
-                    firstTransformer,
-                    secondTransformer
+                    firstTransformerMock.Object,
+                    secondTransformerMock.Object
                     );
 
             ITransformer<DestinationModel, DestinationModel> newTransformer =
                 transformer
-                .PipeShift(fourthTransformer)
-                .PipeShift(thirdTransformer);
+                .PipeShift(fourthTransformerMock.Object)
+                .PipeShift(thirdTransformerMock.Object);
 
-            newTransformer.Transform(new DestinationModel());
+            newTransformer.Transform(destinationModel);
 
-            Assert.IsTrue(firstTransformer.Executed);
-            Assert.IsTrue(secondTransformer.Executed);
-            Assert.IsTrue(thirdTransformer.Executed);
-            Assert.IsTrue(fourthTransformer.Executed);
+            firstTransformerMock.Verify(_ => _.Transform(sourceModel), Times.Once);
+            secondTransformerMock.Verify(_ => _.Transform(intermediateModel), Times.Once);
+            thirdTransformerMock.Verify(_ => _.Transform(destinationModel), Times.Once);
+            fourthTransformerMock.Verify(_ => _.Transform(intermediateModel), Times.Once);
         }
 
         [TestMethod]
         public void TestDisposesAllTransformersWhenPushing()
         {
-            TransformerMock<SourceModel, IntermediateModel> firstTransformer =
-                new TransformerMock<SourceModel, IntermediateModel>(new IntermediateModel());
-
-            TransformerMock<IntermediateModel, DestinationModel> secondTransformer =
-                new TransformerMock<IntermediateModel, DestinationModel>(new DestinationModel());
-
-            TransformerMock<DestinationModel, IntermediateModel> thirdTransformer =
-                new TransformerMock<DestinationModel, IntermediateModel>(new IntermediateModel());
-
-            TransformerMock<IntermediateModel, SourceModel> fourthTransformer =
-                new TransformerMock<IntermediateModel, SourceModel>(new SourceModel());
+            Mock<IDisposableTransformer<SourceModel, IntermediateModel>> firstTransformerMock = new Mock<IDisposableTransformer<SourceModel, IntermediateModel>>();
+            Mock<IDisposableTransformer<IntermediateModel, DestinationModel>> secondTransformerMock = new Mock<IDisposableTransformer<IntermediateModel, DestinationModel>>();
+            Mock<IDisposableTransformer<DestinationModel, IntermediateModel>> thirdTransformerMock = new Mock<IDisposableTransformer<DestinationModel, IntermediateModel>>();
+            Mock<IDisposableTransformer<IntermediateModel, SourceModel>> fourthTransformerMock = new Mock<IDisposableTransformer<IntermediateModel, SourceModel>>();
 
             TransformerPipeline<SourceModel, IntermediateModel, DestinationModel> transformer =
                 new TransformerPipeline<SourceModel, IntermediateModel, DestinationModel>(
-                    firstTransformer,
-                    secondTransformer
+                    firstTransformerMock.Object,
+                    secondTransformerMock.Object
                     );
 
             TransformerPipeline<SourceModel, IntermediateModel, SourceModel> newTransformer =
                 transformer
-                .PipePush(thirdTransformer)
-                .PipePush(fourthTransformer);
+                .PipePush(thirdTransformerMock.Object)
+                .PipePush(fourthTransformerMock.Object);
 
             newTransformer.Dispose();
 
-            Assert.IsTrue(firstTransformer.Disposed);
-            Assert.IsTrue(secondTransformer.Disposed);
-            Assert.IsTrue(thirdTransformer.Disposed);
-            Assert.IsTrue(fourthTransformer.Disposed);
+            firstTransformerMock.Verify(_ => _.Dispose(), Times.Once);
+            secondTransformerMock.Verify(_ => _.Dispose(), Times.Once);
+            thirdTransformerMock.Verify(_ => _.Dispose(), Times.Once);
+            fourthTransformerMock.Verify(_ => _.Dispose(), Times.Once);
         }
 
         [TestMethod]
         public void TestsDisposesAllTransformersWhenShifting()
         {
-            TransformerMock<SourceModel, IntermediateModel> firstTransformer =
-                new TransformerMock<SourceModel, IntermediateModel>(new IntermediateModel());
-
-            TransformerMock<IntermediateModel, DestinationModel> secondTransformer =
-                new TransformerMock<IntermediateModel, DestinationModel>(new DestinationModel());
-
-            TransformerMock<DestinationModel, IntermediateModel> thirdTransformer =
-                new TransformerMock<DestinationModel, IntermediateModel>(new IntermediateModel());
-
-            TransformerMock<IntermediateModel, SourceModel> fourthTransformer =
-                new TransformerMock<IntermediateModel, SourceModel>(new SourceModel());
+            Mock<IDisposableTransformer<SourceModel, IntermediateModel>> firstTransformerMock = new Mock<IDisposableTransformer<SourceModel, IntermediateModel>>();
+            Mock<IDisposableTransformer<IntermediateModel, DestinationModel>> secondTransformerMock = new Mock<IDisposableTransformer<IntermediateModel, DestinationModel>>();
+            Mock<IDisposableTransformer<DestinationModel, IntermediateModel>> thirdTransformerMock = new Mock<IDisposableTransformer<DestinationModel, IntermediateModel>>();
+            Mock<IDisposableTransformer<IntermediateModel, SourceModel>> fourthTransformerMock = new Mock<IDisposableTransformer<IntermediateModel, SourceModel>>();
 
             TransformerPipeline<SourceModel, IntermediateModel, DestinationModel> transformer =
                 new TransformerPipeline<SourceModel, IntermediateModel, DestinationModel>(
-                    firstTransformer,
-                    secondTransformer
+                    firstTransformerMock.Object,
+                    secondTransformerMock.Object
                     );
 
             TransformerPipeline<DestinationModel, IntermediateModel, DestinationModel> newTransformer =
                 transformer
-                .PipeShift(fourthTransformer)
-                .PipeShift(thirdTransformer);
+                .PipeShift(fourthTransformerMock.Object)
+                .PipeShift(thirdTransformerMock.Object);
 
             newTransformer.Dispose();
 
-            Assert.IsTrue(firstTransformer.Disposed);
-            Assert.IsTrue(secondTransformer.Disposed);
-            Assert.IsTrue(thirdTransformer.Disposed);
-            Assert.IsTrue(fourthTransformer.Disposed);
+            firstTransformerMock.Verify(_ => _.Dispose(), Times.Once);
+            secondTransformerMock.Verify(_ => _.Dispose(), Times.Once);
+            thirdTransformerMock.Verify(_ => _.Dispose(), Times.Once);
+            fourthTransformerMock.Verify(_ => _.Dispose(), Times.Once);
         }
     }
 }
