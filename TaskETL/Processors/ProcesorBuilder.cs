@@ -69,6 +69,54 @@ namespace TaskETL.Processors
         }
 
         /// <summary>
+        /// <para>
+        /// Adds an independent job. This job will be executed in isolation
+        /// of other jobs.
+        /// </para>
+        /// </summary>
+        /// <typeparam name="SourceType"></typeparam>
+        /// <param name="processorID"></param>
+        /// <param name="extractor"></param>
+        /// <param name="transformer"></param>
+        /// <param name="loader"></param>
+        /// <returns></returns>
+        public ProcessorBuilder<DestinationType> AddIndependentJob<SourceType>(
+            string processorID,
+            IExtractor<SourceType> extractor,
+            ITransformer<SourceType, DestinationType> transformer,
+            ILoader<DestinationType> loader
+            )
+        {
+
+            this.Model.AddProcesor(this.CreateProcessor(processorID, extractor, transformer, new List<ILoader<DestinationType>>() { loader }));
+            return this;
+        }
+
+        /// <summary>
+        /// Adds an independent job. This job will be executed in isolation
+        /// of other jobs.
+        /// </summary>
+        /// <param name="processorID"></param>
+        /// <param name="extractor"></param>
+        /// <param name="loader"></param>
+        /// <returns></returns>
+        public ProcessorBuilder<DestinationType> AddIndependentJob(
+            string processorID,
+            IExtractor<DestinationType> extractor,
+            ILoader<DestinationType> loader
+            )
+        {
+            ITransformer<DestinationType, DestinationType> transformer = new NoActionTransformer<DestinationType>("");
+
+            return this.AddIndependentJob(
+                processorID,
+                extractor,
+                transformer,
+                loader
+                );
+        }
+
+        /// <summary>
         /// Adds a new report to be used by the processor.
         /// </summary>
         /// <param name="report">Report to be used by the processor.</param>

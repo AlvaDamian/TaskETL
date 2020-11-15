@@ -1,10 +1,17 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace TaskETL.Proccessors
+using TaskETL.Processors;
+
+namespace TaskETL.Processors
 {
-    class JobWarningException
+    public class JobWarningException : JobException
     {
+        public JobWarningException(string message, string faillingComponentID, Phase jobPhase) : base(message, faillingComponentID, jobPhase)
+        {
+        }
+
+        public JobWarningException(string message, string faillingComponentID, Phase jobPhase, Exception innerException) : base(message, faillingComponentID, jobPhase, innerException)
+        {
+        }
     }
 }

@@ -525,5 +525,75 @@ namespace TaskETLTests.Processors
             loaderMock.Verify(_ => _.Load(dataB), Times.Once);
             loaderMock.Verify(_ => _.Load(dataC), Times.Once);
         }
+
+        [TestMethod]
+        public void TestIndependenJobWillNotCollideWithOtherJobs()
+        {
+            SourceModel independentData = new SourceModel() { DecimalData = 33m, StringData = "independent" };
+            SourceModel dataA = new SourceModel() { StringData = "dataA" };
+            SourceModel dataB = new SourceModel() { StringData = "dataB" };
+            SourceModel dataC = new SourceModel() { StringData = "dataC" };
+
+            DestinationModel independentDestinationData = new DestinationModel() { StringData = "independent destination" };
+            DestinationModel sharedDestinationData = new DestinationModel() { StringData = "Shared destination" };
+
+            Mock<IExtractor<SourceModel>> independentExtractorMock = new Mock<IExtractor<SourceModel>>();
+            Mock<IExtractor<SourceModel>> firstExtractorMock = new Mock<IExtractor<SourceModel>>();
+            Mock<IExtractor<SourceModel>> secondExtractorMock = new Mock<IExtractor<SourceModel>>();
+            Mock<IExtractor<SourceModel>> thirdExtractorMock = new Mock<IExtractor<SourceModel>>();
+
+            Mock<IExtractor<DestinationModel>> sameTypeIndependentExtractorMock = new Mock<IExtractor<DestinationModel>>();
+
+            Mock<ITransformer<SourceModel, DestinationModel>> independentTransformerMock = new Mock<ITransformer<SourceModel, DestinationModel>>();
+            Mock<ITransformer<SourceModel, DestinationModel>> sharedTransformerMock = new Mock<ITransformer<SourceModel, DestinationModel>>();
+
+            Mock<ILoader<DestinationModel>> loaderMock = new Mock<ILoader<DestinationModel>>();
+            Mock<ILoader<DestinationModel>> independentLoaderMock = new Mock<ILoader<DestinationModel>>();
+
+            independentExtractorMock.Setup(_ => _.Extract()).Returns(independentData);
+            firstExtractorMock.Setup(_ => _.Extract()).Returns(dataA);
+            secondExtractorMock.Setup(_ => _.Extract()).Returns(dataB);
+            thirdExtractorMock.Setup(_ => _.Extract()).Returns(dataC);
+
+            sameTypeIndependentExtractorMock.Setup(_ => _.Extract()).Returns(independentDestinationData);
+
+            independentTransformerMock.Setup(_ => _.Transform(independentData)).Returns(independentDestinationData);
+            sharedTransformerMock.Setup(_ => _.Transform(It.IsAny<SourceModel>())).Returns(sharedDestinationData);
+
+            IProcessor processor = new ProcessorBuilder<DestinationModel>(loaderMock.Object)
+                .AddSource("Processor A", firstExtractorMock.Object, sharedTransformerMock.Object)
+                .AddSource("Processor B", secondExtractorMock.Object, sharedTransformerMock.Object)
+                .AddSource("Processor C", thirdExtractorMock.Object, sharedTransformerMock.Object)
+                .AddIndependentJob("Independent processor", independentExtractorMock.Object, independentTransformerMock.Object, independentLoaderMock.Object)
+                .Build();
+
+
+            IEnumerable<Task<JobResult>> tasks = processor.Process();
+            Task.WaitAll(new List<Task<JobResult>>(tasks).ToArray());
+
+            independentTransformerMock.Verify(_ => _.Transform(independentData), Times.Once);
+            independentTransformerMock.Verify(_ => _.Transform(dataA), Times.Never);
+            independentTransformerMock.Verify(_ => _.Transform(dataB), Times.Never);
+            independentTransformerMock.Verify(_ => _.Transform(dataC), Times.Never);
+
+            independentLoaderMock.Verify(_ => _.Load(independentDestinationData), Times.Once);
+            independentLoaderMock.Verify(_ => _.Load(sharedDestinationData), Times.Never);
+
+            loaderMock.Verify(_ => _.Load(independentDestinationData), Times.Never);
+
+
+            loaderMock.Reset();
+            independentLoaderMock.Reset();
+
+            processor = new ProcessorBuilder<DestinationModel>(loaderMock.Object)
+                .AddIndependentJob("independent process", sameTypeIndependentExtractorMock.Object, independentLoaderMock.Object)
+                .Build();
+
+            tasks = processor.Process();
+            Task.WaitAll(new List<Task<JobResult>>(tasks).ToArray());
+
+            independentLoaderMock.Verify(_ => _.Load(independentDestinationData), Times.Once);
+            loaderMock.Verify(_ => _.Load(independentDestinationData), Times.Never);
+        }
     }
 }

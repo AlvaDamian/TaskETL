@@ -8,6 +8,7 @@ namespace TaskETLTests.Mock
 
 
         public IEnumerable<string> StringEnumerable { get => this._strings; }
+        public string StringData { get; set; }
 
         public DestinationModel()
         {
